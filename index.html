@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>アゲアゲノミゲー！ 大学生の飲みゲー集</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=M+PLUS+Rounded+1c:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#14101f; --card:#211a33; --card2:#2b2242; --ink:#fff8ec; --mute:#b9aed3;
+  --pink:#ff4f8b; --yellow:#ffd23f; --mint:#3ee6b4; --blue:#5aa9ff; --orange:#ff8a3d;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"M PLUS Rounded 1c",system-ui,sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;
+  background-image:radial-gradient(circle at 15% 0%,#3a1d4d 0,transparent 40%),radial-gradient(circle at 100% 30%,#1c2f4d 0,transparent 35%);}
+.wrap{max-width:560px;margin:0 auto;padding:20px 16px 60px}
+header{text-align:center;padding:18px 0 10px}
+.logo{font-family:"Dela Gothic One",sans-serif;font-size:clamp(38px,11vw,54px);line-height:1.1;letter-spacing:2px;
+  background:linear-gradient(90deg,var(--yellow),var(--pink));-webkit-background-clip:text;background-clip:text;color:transparent;transform:rotate(-3deg);display:inline-block}
+.tag{color:var(--mute);font-size:14px;margin-top:10px}
+.bar{display:flex;gap:8px;align-items:center;justify-content:center;margin:14px 0 6px;flex-wrap:wrap}
+.chip{background:var(--card);border:1px solid #3b3158;border-radius:999px;padding:8px 14px;font-size:13px;font-weight:700;color:var(--ink);cursor:pointer;font-family:inherit}
+.chip.on{background:var(--mint);color:#102;border-color:var(--mint)}
+h2{font-family:"Dela Gothic One",sans-serif;font-weight:400;font-size:20px;margin:26px 0 12px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.game{background:var(--card);border-radius:20px;padding:16px 14px;cursor:pointer;border:2px solid transparent;transition:transform .12s,border-color .12s;text-align:left;color:var(--ink);font-family:inherit}
+.game:hover{border-color:var(--c)}
+.game:active{transform:scale(.97)}
+.game .em{font-size:30px}
+.game b{display:block;font-size:16px;margin:8px 0 4px;color:var(--c)}
+.game span{font-size:12px;color:var(--mute);line-height:1.5}
+.players{background:var(--card);border-radius:20px;padding:16px}
+.prow{display:flex;gap:8px}
+input[type=text]{flex:1;background:var(--card2);border:none;border-radius:12px;padding:12px;color:var(--ink);font-size:16px;font-family:inherit}
+.btn{white-space:nowrap;background:var(--pink);color:#fff;border:none;border-radius:14px;padding:12px 18px;font-weight:800;font-size:16px;cursor:pointer;font-family:inherit}
+.btn.sub{background:var(--card2)}
+.btn.big{width:100%;padding:18px;font-size:20px;margin-top:14px}
+.plist{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.pchip{background:var(--card2);border-radius:999px;padding:6px 6px 6px 12px;font-size:14px;display:flex;align-items:center;gap:6px}
+.pchip button{background:#463a66;border:none;color:var(--ink);width:22px;height:22px;border-radius:50%;cursor:pointer;font-size:12px}
+.hint{font-size:12px;color:var(--mute);margin-top:10px}
+/* game screen */
+#screen{display:none}
+.back{background:none;border:none;color:var(--mute);font-size:15px;cursor:pointer;font-family:inherit;padding:6px 0}
+.ghead{display:flex;align-items:center;gap:10px;margin:10px 0 4px}
+.ghead .em{font-size:36px}
+.ghead h3{font-family:"Dela Gothic One",sans-serif;font-weight:400;font-size:24px;color:var(--c)}
+.rule{color:var(--mute);font-size:14px;line-height:1.7;background:var(--card);border-radius:16px;padding:12px 14px;margin:10px 0 16px}
+.stage{background:var(--card);border-radius:24px;min-height:240px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:28px 18px;border:3px solid var(--c);position:relative;overflow:hidden}
+.stage .small{color:var(--mute);font-size:14px;margin-bottom:10px}
+.stage .main{font-size:28px;font-weight:800;line-height:1.45;word-break:break-word}
+.stage .penalty{margin-top:16px;font-size:15px;background:var(--card2);padding:8px 14px;border-radius:999px;color:var(--yellow)}
+.pop{animation:pop .35s ease}
+@keyframes pop{0%{transform:scale(.85);opacity:0}100%{transform:scale(1);opacity:1}}
+.shake{animation:shake .5s}
+@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-10px)}40%,80%{transform:translateX(10px)}}
+.boom{background:var(--orange)!important;color:#1a0b00}
+.boom .small{color:#4a2200}
+.timerbar{position:absolute;left:0;bottom:0;height:6px;background:var(--c);transition:width .1s linear}
+.game{position:relative}
+.badge{position:absolute;top:10px;right:10px;font-size:10px;font-weight:800;background:var(--c);color:#14101f;border-radius:999px;padding:2px 8px}
+.filters{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.slots{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;width:100%;margin-top:14px}
+.slot{aspect-ratio:1;border-radius:14px;border:none;background:var(--card2);font-size:26px;cursor:pointer;color:var(--ink);font-family:inherit}
+.slot:disabled{opacity:.45;cursor:default}
+.sbtns{display:flex;gap:10px;margin-top:16px;width:100%}
+.sbtns .btn{flex:1;font-size:20px;padding:16px 0}
+.numin{width:100%;background:var(--card2);border:none;border-radius:14px;padding:14px;color:var(--ink);font-size:26px;text-align:center;font-family:inherit;margin-top:14px}
+.said{font-size:13px;color:var(--mute);margin-top:12px;line-height:1.6;word-break:break-all}
+footer{margin-top:36px;background:var(--card);border-radius:18px;padding:16px;font-size:13px;color:var(--mute);line-height:1.8}
+footer b{color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div id="home">
+  <header>
+    <div class="logo">アゲアゲ<br>ノミゲー！</div>
+    <p class="tag">飲んでも飲まなくても、全員アゲアゲ</p>
+    <div class="bar">
+      <button class="chip" id="nonAlc">🧃 ノンアルモード：OFF</button>
+    </div>
+  </header>
+
+  <h2>👥 参加メンバー</h2>
+  <div class="players">
+    <div class="prow">
+      <input type="text" id="pname" placeholder="名前を入れてEnter" maxlength="12">
+      <button class="btn" id="padd">追加</button>
+    </div>
+    <div class="plist" id="plist"></div>
+    <p class="hint">名前を入れると「指名ルーレット」や「誰が一番？」で使えます。入れなくても遊べます。</p>
+  </div>
+
+  <h2>🎲 ゲームを選ぶ</h2>
+  <div class="filters" id="filters">
+    <button class="chip on" data-f="all">すべて</button>
+    <button class="chip" data-f="std">⭐ 定番</button>
+    <button class="chip" data-f="minor">🧪 マイナー</button>
+    <button class="chip" data-f="love">💘 合コン・カップル</button>
+    <button class="chip" data-f="small">👫 少人数（2〜3人）</button>
+  </div>
+  <div class="grid" id="grid"></div>
+
+  <footer>
+    <b>🍻 楽しく飲むためのお約束</b><br>
+    ・20歳未満の飲酒は法律で禁止。未成年はソフドリで参加しよう。<br>
+    ・イッキ・飲酒の強要はNG（アルハラ）。飲めない人は「パス」や他の罰ゲームでOK。<br>
+    ・お酒と同じくらい水も飲もう。気分が悪い人がいたら無理させない。
+  </footer>
+</div>
+
+<div id="screen">
+  <button class="back" id="back">← ゲーム一覧にもどる</button>
+  <div class="ghead"><span class="em" id="gEm"></span><h3 id="gTitle"></h3></div>
+  <div class="rule" id="gRule"></div>
+  <div class="stage" id="stage"></div>
+  <button class="btn big" id="gBtn"></button>
+  <button class="btn big sub" id="gBtn2" style="display:none"></button>
+</div>
+
+</div>
+<script>
+// ---------- state ----------
+let players = [];
+let nonAlc = false;
+try{ players = JSON.parse(localStorage.getItem('nomige_players')||'[]'); nonAlc = localStorage.getItem('nomige_nonalc')==='1'; }catch(e){}
+const save = ()=>{ try{ localStorage.setItem('nomige_players',JSON.stringify(players)); localStorage.setItem('nomige_nonalc',nonAlc?'1':'0'); }catch(e){} };
+const pick = a => a[Math.floor(Math.random()*a.length)];
+const $ = id => document.getElementById(id);
+const drink = (n) => nonAlc ? pick(PEN_SOFT) : pick(n==='big' ? PEN_BIG : PEN_SMALL);
+
+// ---------- data ----------
+const PEN_SMALL = ['ひと口飲む 🍺','ひと口飲む 🍺','ふた口飲む 🍻','左隣の人と乾杯してひと口','好きな人を1人指名して一緒にひと口'];
+const PEN_BIG = ['ふた口飲む 🍻','グラスの1/4飲む','全員で乾杯してひと口','右隣の人と一緒にふた口'];
+const PEN_SOFT = ['変顔で10秒キープ 🤪','好きなタイプを発表','最近ハマってるものを熱弁','モノマネを1つ','全員にひとこと褒める','次のゲームまで語尾に「〜ぴょん」'];
+
+const YAMANOTE = ['コンビニの商品','ジブリ作品','47都道府県','大学の学部名','山手線の駅','ポケモン','カップ麺の名前','スタバのメニュー','お酒の名前','国の首都','野菜','アニメのタイトル','Jリーグのチーム','ディズニーキャラ','チェーン居酒屋','果物','有名なYouTuber','少年ジャンプの漫画','東京の大学','楽器','犬種','スマホアプリ','おにぎりの具','授業でよくある科目','お菓子メーカー','ラーメンの種類','乗り物','Netflixの作品','ファッションブランド','朝ドラのタイトル'];
+
+const NEVER = ['授業中に寝て先生に起こされたことある','単位を落としたことある','サークルを2つ以上入ったことある','終電を逃したことある','バイトをバックレたことある','元恋人のSNSをこっそり見たことある','講義を一回も出ずにテストを受けたことある','友達の家に泊まって次の日そのまま学校に行ったことある','推しのために遠征したことある','寝坊で1限をサボったことある','マッチングアプリを使ったことある','レポートを締切5分前に出したことある','財布を落としたことある','一目惚れしたことある','既読無視したことある','バイト先の人を好きになったことある','カラオケでオールしたことある','一人焼肉したことある','留年しそうになったことある','告白されたことある'];
+
+const MOST = ['一番先に結婚しそうな人','一番モテそうな人','将来社長になってそうな人','一番寝坊しそうな人','一番お金持ちになりそうな人','留年しそうな人','一番方向音痴そうな人','無人島で最後まで生き残りそうな人','一番恋愛体質な人','芸能人になれそうな人','一番怒らせたら怖い人','一番インスタ映えを気にする人','一番ギャップがある人','合コンで一番盛り上げそうな人','一番泣き上戸になりそうな人'];
+
+const BOMB = ['「あ」から始まる言葉','赤いもの','冷蔵庫にあるもの','学校にあるもの','丸いもの','甘い食べ物','動物','ドラえもんの道具','夏っぽいもの','カタカナ3文字の言葉','コンビニで買えるもの','スポーツ','「ん」で終わる言葉','有名人の名前','飲み物'];
+
+const KING = ['〇番と〇番が10秒見つめ合う','〇番が〇番のいいところを3つ言う','〇番と〇番がハイタッチ','〇番が一発ギャグ','〇番が〇番にあだ名をつける','〇番が初恋の話をする','〇番が〇番と腕相撲','〇番がスマホの最新の写真を見せる','〇番が好きな曲を口ずさむ','〇番と〇番が手をつないで乾杯'];
+
+const WOLF = [['ラーメン','うどん'],['海','プール'],['コーヒー','紅茶'],['犬','猫'],['スタバ','ドトール'],['ディズニーランド','USJ'],['夏休み','春休み'],['LINE','インスタ'],['焼肉','すき焼き'],['カラオケ','ボウリング'],['マック','モス'],['サークル','部活'],['温泉','サウナ'],['お寿司','焼き鳥'],['遊園地','水族館'],['卒業式','入学式']];
+const NGW = ['やばい','マジで','たしかに','えー','なんで','ありがとう','ごめん','すごい','いや','うん','わかる','かわいい','飲む','ウケる','それな','大学','バイト','ほんとに','おいしい','ちょっと'];
+const DOCCHI = [['きのこの山','たけのこの里'],['犬','猫'],['朝型','夜型'],['海','山'],['ご飯','パン'],['夏','冬'],['LINE','電話'],['先にお風呂','先にご飯'],['粒あん','こしあん'],['目玉焼きに醤油','目玉焼きにソース'],['恋人と毎日連絡','たまに連絡'],['告白する','告白される'],['iPhone','Android'],['唐揚げにレモンかける','かけない'],['貯金する','パーっと使う'],['一人旅','みんなで旅行']];
+const TALK = ['最近あった恥ずかしい話','人生で一番笑った話','初恋の話','バイトでの事件','大学に入って驚いたこと','もし1億円あったら','理想のデート','地元の自慢','最近泣いた話','やらかした失敗談','人生最大のピンチ','この中の誰かの第一印象','今ハマってるもの','10年後の自分','最近ちょっとイラッとしたこと'];
+
+// ---------- games ----------
+const GAMES = [
+ {id:'roulette',em:'🎯',name:'指名ルーレット',c:'var(--pink)',desc:'誰が飲むかをランダムに決める',
+  rule:'ボタンを押すとメンバーから1人を指名。罰ゲームもランダムで決まります。',
+  init(s){ s.innerHTML = `<div class="small">ボタンを押してスタート</div><div class="main">誰が当たる…？</div>`; },
+  btn:'ルーレットを回す',
+  run(s){
+    const list = players.length? players.map(esc) : ['1番の人','2番の人','3番の人','4番の人'];
+    let i=0, n=14+Math.floor(Math.random()*8); const tok=this.tok=(this.tok||0)+1;
+    const tick=()=>{ if(tok!==this.tok) return; s.innerHTML=`<div class="small">ドゥルルルル…</div><div class="main">${pick(list)}</div>`; if(++i<n) setTimeout(tick,60+i*12); else { const w=pick(list); s.innerHTML=`<div class="small">選ばれたのは…</div><div class="main pop">${w}</div><div class="penalty pop">${drink()}</div>`; s.classList.add('shake'); setTimeout(()=>s.classList.remove('shake'),500);} };
+    tick();
+  },
+  stop(){ this.tok=(this.tok||0)+1; }},
+ {id:'yamanote',em:'🚃',name:'山手線ゲーム',c:'var(--mint)',desc:'お題に沿って順番に答える',
+  rule:'お題が出たら、手拍子に合わせて順番に答えていく。詰まった人・かぶった人の負け！',
+  init(s){ s.innerHTML=`<div class="small">お題を出そう</div><div class="main">🚃 山手線ゲーム 🚃</div>`; },
+  btn:'お題を出す',
+  run(s){ s.innerHTML=`<div class="small">お題は…</div><div class="main pop">${pick(YAMANOTE)}</div><div class="penalty">負けた人：${drink()}</div>`; }},
+ {id:'never',em:'🙋',name:'したことある人',c:'var(--yellow)',desc:'「ある！」人が飲むゲーム',
+  rule:'出たお題を「したことある」人は正直に手を挙げて罰ゲーム。言いたくないことは言わなくてOK。',
+  init(s){ s.innerHTML=`<div class="small">正直に答えてね</div><div class="main">したことある人〜？</div>`; },
+  btn:'次のお題',
+  run(s){ s.innerHTML=`<div class="small">したことある人〜？</div><div class="main pop">${pick(NEVER)}</div><div class="penalty">ある人：${drink()}</div>`; }},
+ {id:'most',em:'👉',name:'誰が一番？',c:'var(--blue)',desc:'せーので指差し多数決',
+  rule:'お題を読み上げて「せーの」で一番当てはまる人を指差す。一番多く指された人が罰ゲーム！',
+  init(s){ s.innerHTML=`<div class="small">せーので指差し！</div><div class="main">この中で一番…</div>`; },
+  btn:'お題を出す',
+  run(s){ s.innerHTML=`<div class="small">この中で…</div><div class="main pop">${pick(MOST)}は？</div><div class="penalty">一番指された人：${drink()}</div>`; }},
+ {id:'bomb',em:'💣',name:'爆弾ゲーム',c:'var(--orange)',desc:'答えてスマホを回す時限爆弾',
+  rule:'お題に合う言葉を言ったら隣にスマホを渡す。何秒で爆発するかは誰にもわからない…持ってる人が負け！',
+  init(s){ s.classList.remove('boom'); s.innerHTML=`<div class="small">スタートで爆弾起動</div><div class="main">💣</div>`; },
+  btn:'スタート',
+  run(s){
+    if(this.t){ return; }
+    s.classList.remove('boom');
+    const topic = pick(BOMB), total = 10000+Math.random()*20000, start=Date.now();
+    s.innerHTML=`<div class="small">お題</div><div class="main pop">${topic}</div><div class="penalty">答えたら次の人へ！</div><div class="timerbar" id="tb" style="width:100%"></div>`;
+    $('gBtn').textContent='💣 作動中…';
+    this.t=setInterval(()=>{
+      const el=Date.now()-start; const tb=$('tb'); if(tb) tb.style.width=Math.max(0,100-el/total*100)+'%';
+      if(el>=total){ clearInterval(this.t); this.t=null; s.classList.add('boom','shake'); setTimeout(()=>s.classList.remove('shake'),500);
+        s.innerHTML=`<div class="small">持ってた人の負け！</div><div class="main pop">💥 ドカーン 💥</div><div class="penalty">${drink('big')}</div>`;
+        try{ navigator.vibrate && navigator.vibrate([200,80,300]); }catch(e){}
+        $('gBtn').textContent='もう一回'; }
+    },100);
+  },
+  stop(){ if(this.t){clearInterval(this.t); this.t=null;} }},
+ {id:'king',em:'👑',name:'王様ゲーム',c:'var(--yellow)',desc:'命令はアプリが考える',
+  rule:'番号付きの割り箸などを配って王様を決めよう。王様が「命令を出す」を押して、番号を言って命令！',
+  init(s){ s.innerHTML=`<div class="small">王様だーれだ？</div><div class="main">👑</div>`; },
+  btn:'命令を出す',
+  run(s){
+    const max = Math.max(players.length-1,4);
+    const a = 1+Math.floor(Math.random()*max); let b; do{ b=1+Math.floor(Math.random()*max);}while(b===a);
+    let order = pick(KING).replace('〇番',a+'番').replace('〇番',b+'番');
+    s.innerHTML=`<div class="small">王様の命令は…</div><div class="main pop">${order}</div><div class="penalty">できなかったら：${drink()}</div>`;
+  }},
+ {id:'wolf',em:'🐺',name:'ワードウルフ',c:'var(--mint)',desc:'1人だけ違うお題の人を探せ',
+  rule:'スマホを回して順番に自分のお題をこっそり確認。1人だけ違うお題（ウルフ）がいます。お題について話し合って、ウルフを当てよう！バレたらウルフ、外したら他のみんなが罰ゲーム。',
+  init(s){ this.ph=null; s.innerHTML=`<div class="small">${names().length}人で遊びます</div><div class="main">🐺 ウルフは誰だ？</div>`; $('gBtn').textContent=this.btn; },
+  btn:'ゲーム開始',
+  run(s){
+    const ps=names();
+    if(!this.ph||this.ph==='end'){ const pr=pick(WOLF); const sw=Math.random()<.5; this.w=[sw?pr[1]:pr[0], sw?pr[0]:pr[1]]; this.wolf=Math.floor(Math.random()*ps.length); this.i=0; this.ph='pass'; }
+    else if(this.ph==='pass'){ this.ph='show'; }
+    else if(this.ph==='show'){ this.i++; this.ph = this.i<ps.length?'pass':'talk'; }
+    else if(this.ph==='talk'){ this.ph='end'; }
+    if(this.ph==='pass'){ s.innerHTML=`<div class="small">${this.i+1} / ${ps.length}</div><div class="main pop">${ps[this.i]}さんに<br>スマホを渡してね</div>`; $('gBtn').textContent='自分のお題を見る 👀'; }
+    if(this.ph==='show'){ s.innerHTML=`<div class="small">${ps[this.i]}さんのお題</div><div class="main pop">「${this.i===this.wolf?this.w[1]:this.w[0]}」</div><div class="penalty">覚えたら画面を隠してね</div>`; $('gBtn').textContent='見た！次の人へ'; }
+    if(this.ph==='talk'){ s.innerHTML=`<div class="small">全員確認できたら</div><div class="main pop">話し合いスタート！</div><div class="penalty">3分話して、せーので指差し</div>`; $('gBtn').textContent='答えを見る'; }
+    if(this.ph==='end'){ s.innerHTML=`<div class="small">ウルフは…</div><div class="main pop">${ps[this.wolf]}さん</div><div class="penalty">みんな「${this.w[0]}」／ウルフ「${this.w[1]}」</div><div class="penalty">負けた側：${drink()}</div>`; $('gBtn').textContent='もう一回'; }
+  }},
+ {id:'ng',em:'🤐',name:'NGワード',c:'var(--pink)',desc:'自分だけ知らない禁止ワード',
+  rule:'1人ずつNGワードが決まります。本人以外が画面を見て覚えてね。飲み会中に自分のNGワードを言っちゃったら罰ゲーム！うまく言わせよう。',
+  init(s){ this.i=0; s.innerHTML=`<div class="small">本人は画面を見ないで！</div><div class="main">🤐 NGワード</div>`; $('gBtn').textContent=this.btn; },
+  btn:'NGワードを決める',
+  run(s){
+    const ps=names(); const p=ps[this.i%ps.length]; this.i++;
+    s.innerHTML=`<div class="small">${p}さん<b>以外</b>が見てね 🙈</div><div class="main pop">「${pick(NGW)}」</div><div class="penalty">言っちゃったら：${drink()}</div>`;
+    $('gBtn').textContent= this.i<ps.length ? '次の人のNGワード' : 'もう一周決める';
+  }},
+ {id:'ten',em:'⏱️',name:'10秒ストップ',c:'var(--blue)',desc:'体内時計で10秒ぴったり',
+  rule:'スタートを押したら心の中で10秒数えて、ぴったりだと思ったらストップ！誤差が1秒以上なら罰ゲーム。順番にスマホを回そう。',
+  init(s){ this.st=null; s.innerHTML=`<div class="small">ぴったりを狙え</div><div class="main">10.00</div>`; $('gBtn').textContent=this.btn; },
+  btn:'スタート',
+  run(s){
+    if(!this.st){ this.st=performance.now(); s.innerHTML=`<div class="small">心の中でカウント…</div><div class="main pop">？？.？？</div>`; $('gBtn').textContent='ストップ！✋'; return; }
+    const t=(performance.now()-this.st)/1000; this.st=null; const d=Math.abs(t-10);
+    const msg = d<0.1?'神！！ 全員から拍手 👏': d<1?'セーフ！次の人へ':drink();
+    s.innerHTML=`<div class="small">${d<1?'おしい！':'ずれすぎ！'} 誤差 ${d.toFixed(2)}秒</div><div class="main pop">${t.toFixed(2)}</div><div class="penalty">${msg}</div>`;
+    $('gBtn').textContent='次の人スタート';
+  }},
+ {id:'docchi',em:'⚖️',name:'どっち派？',c:'var(--orange)',desc:'少数派が負けの2択ゲーム',
+  rule:'2択のお題が出たら「せーの」でどっちか指で示す（右手か左手）。少数派になった人が罰ゲーム！同数なら全員で乾杯。',
+  init(s){ s.innerHTML=`<div class="small">少数派が負け！</div><div class="main">どっち派？</div>`; },
+  btn:'お題を出す',
+  run(s){ const p=pick(DOCCHI); s.innerHTML=`<div class="small">せーので！</div><div class="main pop">👈 ${p[0]}<br><span style="font-size:18px;color:var(--mute)">or</span><br>${p[1]} 👉</div><div class="penalty">少数派：${drink()}</div>`; }},
+ {id:'hilo',em:'🃏',name:'ハイ&ロー',c:'var(--yellow)',desc:'次のカードは上か下か',
+  rule:'表示されたカードより次のカードが大きい（ハイ）か小さい（ロー）かを予想。外れたら罰ゲーム、当たったら次の人へ。同じ数字なら全員で乾杯！',
+  init(s){ this.n=rnd13(); this.show(s,'今のカード',''); $('gBtn').textContent='ハイ ⬆️'; },
+  btn:'ハイ ⬆️', btn2:'ロー ⬇️',
+  show(s,label,extra){ const suit=pick(['♠','♥','♦','♣']); const red=suit==='♥'||suit==='♦'; s.innerHTML=`<div class="small">${label}</div><div class="pop" style="background:#fff8ec;color:${red?'#e0245e':'#1a1530'};border-radius:16px;width:120px;height:160px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:800;font-size:46px;line-height:1">${CARD[this.n]}<span style="font-size:36px">${suit}</span></div>${extra}`; },
+  guess(s,hi){ const prev=this.n; this.n=rnd13(); const res = this.n===prev?'同じ！全員で乾杯 🥂':((this.n>prev)===hi?'当たり！次の人へ ✨':'ハズレ…'+drink()); this.show(s,`${CARD[prev]} → 次のカード`,`<div class="penalty">${res}</div>`); },
+  run(s){ this.guess(s,true); }, run2(s){ this.guess(s,false); }},
+ {id:'talk',em:'🎤',name:'トークテーマ',c:'var(--pink)',desc:'お題で1人ずつエピソード',
+  rule:'ルーレットで話す人とテーマが決まります。30秒以内に話せなかったら罰ゲーム。話し終わったらみんなで乾杯！',
+  init(s){ s.innerHTML=`<div class="small">誰が何を話す？</div><div class="main">🎤 トークタイム</div>`; },
+  btn:'テーマを決める',
+  run(s){ s.innerHTML=`<div class="small">${pick(names())}さんが話す</div><div class="main pop">${pick(TALK)}</div><div class="penalty">話せなかったら：${drink()}</div>`; }},
+];
+const MORE = [
+ {id:'banana',em:'🍌',name:'マジカルバナナ',c:'var(--yellow)',desc:'「〇〇といったら△△」で連想',
+  rule:'リズムに合わせて「バナナといったら黄色、黄色といったら…」と前の人の言葉から連想してつなげる。詰まったり、つながってなかったら負け！',
+  init(s){ s.innerHTML=`<div class="small">マジカルバナナ〜♪</div><div class="main">🍌</div>`; },
+  btn:'最初の言葉を決める',
+  run(s){ s.innerHTML=`<div class="small">マジカルバナナ〜♪</div><div class="main pop">${pick(BANANA)}<br>といったら…？</div><div class="penalty">詰まった人：${drink()}</div>`; }},
+ {id:'kurohige',em:'🏴‍☠️',name:'黒ひげ危機一発',c:'var(--pink)',desc:'どれかがハズレのロシアン',
+  rule:'スマホを回して、1人1つずつマスをタップ。12マスのうち1つだけがハズレ！引いた人が罰ゲーム。',
+  init(s){ this.bomb=Math.floor(Math.random()*12); this.left=12;
+    s.innerHTML=`<div class="small">ドキドキ…どれがハズレ？</div><div class="main" style="font-size:22px">1つずつタップしてね</div><div class="slots">${Array.from({length:12},(_,i)=>`<button class="slot" data-act="${i}">🗡️</button>`).join('')}</div>`; },
+  btn:'リセット',
+  run(s){ s.className='stage'; this.init(s); },
+  act(s,a,b){ const i=+a; b.disabled=true;
+    if(i===this.bomb){ b.textContent='💥'; s.querySelectorAll('.slot').forEach(x=>x.disabled=true); s.classList.add('shake'); setTimeout(()=>s.classList.remove('shake'),500);
+      s.querySelector('.main').innerHTML=`<span class="pop" style="color:var(--orange)">ハズレ！ ${drink('big')}</span>`; try{navigator.vibrate&&navigator.vibrate(300)}catch(e){} }
+    else { b.textContent='⭕'; this.left--; s.querySelector('.main').textContent=`セーフ！ 残り${this.left}マス`; } }},
+ {id:'thirty',em:'🔢',name:'30ゲーム',c:'var(--mint)',desc:'30を言った人が負け',
+  rule:'順番に1から数を言っていく。1回で言えるのは1〜3個まで。「30」を言ってしまった人の負け！ボタンで言う個数を選んで次の人へ。',
+  init(s){ this.n=0; this.t=0; this.draw(s,''); },
+  btn:'リセット',
+  draw(s,msg){ const ps=names();
+    if(this.n>=30){ s.innerHTML=`<div class="small">30を言ったのは…</div><div class="main pop">${ps[(this.t-1)%ps.length]}さん</div><div class="penalty">${drink()}</div>`; return; }
+    s.innerHTML=`<div class="small">${ps[this.t%ps.length]}さんの番</div><div class="main pop" style="font-size:56px">${this.n}</div><div class="small">${msg||'いくつ言う？'}</div><div class="sbtns">${[1,2,3].map(k=>`<button class="btn" data-act="${k}">+${k}</button>`).join('')}</div>`; },
+  run(s){ this.init(s); },
+  act(s,a){ const k=+a, from=this.n+1; this.n=Math.min(30,this.n+k); this.t++; this.draw(s,`「${Array.from({length:this.n-from+1},(_,i)=>from+i).join('、')}」`); }},
+ {id:'gesture',em:'🙆',name:'ジェスチャー',c:'var(--blue)',desc:'声を出さずに伝えるゲーム',
+  rule:'出題者だけが画面を見て、お題を体だけで表現。30秒以内にみんなが当てられなかったら出題者が罰ゲーム！',
+  init(s){ this.stop(); s.innerHTML=`<div class="small">出題者だけ見てね</div><div class="main">🙆 ジェスチャー</div>`; },
+  btn:'お題を出す（30秒）',
+  run(s){ this.stop(); const st=Date.now();
+    s.innerHTML=`<div class="small">出題者だけ見てね 🤫</div><div class="main pop">${pick(GESTURE)}</div><div class="penalty" id="gsec">30</div><div class="timerbar" id="tb" style="width:100%"></div>`;
+    this.t=setInterval(()=>{ const r=30-(Date.now()-st)/1000; const tb=$('tb'),g=$('gsec'); if(!tb){this.stop();return;} tb.style.width=Math.max(0,r/30*100)+'%'; g.textContent=Math.ceil(Math.max(0,r))+'秒';
+      if(r<=0){ this.stop(); g.textContent='タイムアップ！当てられなかったら出題者：'+drink(); } },100); },
+  stop(){ if(this.t){clearInterval(this.t);this.t=null;} }},
+ {id:'hayakuchi',em:'👅',name:'早口言葉',c:'var(--orange)',desc:'噛んだら罰ゲーム',
+  rule:'お題の早口言葉を3回連続で言う。噛んだら罰ゲーム！',
+  init(s){ s.innerHTML=`<div class="small">3回連続で言えるかな</div><div class="main">👅</div>`; },
+  btn:'お題を出す',
+  run(s){ s.innerHTML=`<div class="small">3回連続で！</div><div class="main pop" style="font-size:24px">${pick(HAYAKUCHI)}</div><div class="penalty">噛んだら：${drink()}</div>`; }},
+ {id:'ishin',em:'🤝',name:'以心伝心',c:'var(--mint)',desc:'みんなの答えをそろえろ',
+  rule:'お題に対して「せーの」で全員同時に答える。みんなとそろわなかった人が罰ゲーム。全員そろったら全員で乾杯！',
+  init(s){ s.innerHTML=`<div class="small">心をひとつに</div><div class="main">🤝 以心伝心</div>`; },
+  btn:'お題を出す',
+  run(s){ s.innerHTML=`<div class="small">せーので答えて！</div><div class="main pop">${pick(ISHIN)}</div><div class="penalty">そろわなかった人：${drink()}</div>`; }},
+ {id:'takenoko',em:'🎋',name:'たけのこニョッキ',c:'var(--mint)',desc:'かぶったら負けの早押し',
+  rule:'全員両手を合わせてスタンバイ。合図のあと「1ニョッキ！」「2ニョッキ！」と順番は決めずに手を上げながら数を言う。誰かと同時に言ったり、最後まで残った人が負け！',
+  init(s){ s.innerHTML=`<div class="small">手を合わせてスタンバイ</div><div class="main">🎋</div>`; },
+  btn:'合図を出す',
+  run(s){ s.innerHTML=`<div class="main pop">たけのこ たけのこ<br>ニョッキッキ！</div><div class="penalty">かぶった人・最後の人：${drink()}</div>`; s.classList.add('shake'); setTimeout(()=>s.classList.remove('shake'),500); }},
+ {id:'numbomb',em:'🧨',name:'ナンバーボム',c:'var(--orange)',m:1,desc:'隠し数字を踏んだら爆発',
+  rule:'1〜100のどれかに爆弾が隠れています。順番に数字を入れていくと範囲がどんどん狭まる…爆弾の数字を言ってしまった人が負け！',
+  init(s){ this.ans=1+Math.floor(Math.random()*100); this.lo=1; this.hi=100; this.draw(s,''); },
+  btn:'リセット',
+  draw(s,msg){ s.innerHTML=`<div class="small">${msg||'爆弾はこの範囲のどこか…'}</div><div class="main pop" style="font-size:40px">${this.lo} 〜 ${this.hi}</div><input class="numin" type="number" inputmode="numeric" id="nb" placeholder="数字を入れて"><div class="sbtns"><button class="btn" data-act="go">決定</button></div>`; },
+  run(s){ s.className='stage'; this.init(s); },
+  act(s){ const v=parseInt($('nb').value,10);
+    if(!(v>=this.lo&&v<=this.hi)){ this.draw(s,`${this.lo}〜${this.hi}の中から選んでね`); return; }
+    if(v===this.ans){ s.classList.add('boom','shake'); setTimeout(()=>s.classList.remove('shake'),500); s.innerHTML=`<div class="small">爆弾は ${v} でした</div><div class="main pop">💥 ドカーン 💥</div><div class="penalty">${drink('big')}</div>`; try{navigator.vibrate&&navigator.vibrate([200,80,300])}catch(e){} return; }
+    if(v<this.ans) this.lo=v+1; else this.hi=v-1; this.draw(s,`${v} はセーフ！次の人へ`); }},
+ {id:'kyotsu',em:'🔗',name:'共通点さがし',c:'var(--blue)',m:1,desc:'2人の共通点を10秒で3つ',
+  rule:'ランダムに選ばれた2人が、10秒以内に2人の共通点を3つ言う。言えなかったら2人で罰ゲーム。初対面の飲み会にもおすすめ！',
+  init(s){ s.innerHTML=`<div class="small">仲良くなれるかも</div><div class="main">🔗 共通点さがし</div>`; },
+  btn:'2人を選ぶ',
+  run(s){ const ps=names(); const a=Math.floor(Math.random()*ps.length); let b; do{b=Math.floor(Math.random()*ps.length)}while(b===a);
+    s.innerHTML=`<div class="small">10秒で共通点を3つ！</div><div class="main pop">${ps[a]}<br>× ${ps[b]}</div><div class="penalty">言えなかったら2人で：${drink()}</div>`; }},
+ {id:'shibari',em:'⛓️',name:'縛りしりとり',c:'var(--pink)',m:1,desc:'ルール付きのしりとり',
+  rule:'出た縛りルールを守ってしりとり。ルール違反・「ん」で終わる・5秒詰まったら負け！',
+  init(s){ s.innerHTML=`<div class="small">ふつうのしりとりじゃつまらない</div><div class="main">⛓️</div>`; },
+  btn:'縛りを決める',
+  run(s){ s.innerHTML=`<div class="small">しりとりの縛りは…</div><div class="main pop">${pick(SHIBARI)}</div><div class="small" style="margin-top:12px">最初の言葉：「${pick(['りんご','すいか','だいがく','かんぱい','さくら','こたつ'])}」</div><div class="penalty">負けた人：${drink()}</div>`; }},
+ {id:'sakasa',em:'🔄',name:'逆さ言葉',c:'var(--yellow)',m:1,desc:'5秒で逆から読めるか',
+  rule:'表示された言葉を5秒以内に逆から読む。噛んだり間違えたら罰ゲーム！',
+  init(s){ s.innerHTML=`<div class="small">逆から読んでね</div><div class="main">🔄</div>`; },
+  btn:'お題を出す',
+  run(s){ s.innerHTML=`<div class="small">5秒以内に逆から！</div><div class="main pop">${pick(SAKASA)}</div><div class="penalty">間違えたら：${drink()}</div>`; }},
+ {id:'uso',em:'🤥',name:'2つの本当と1つのウソ',c:'var(--mint)',m:1,desc:'ウソを見抜けるか',
+  rule:'選ばれた人がテーマについて「本当2つ・ウソ1つ」を話す。みんなでウソを当てて、外した人が罰ゲーム。全員当てたら話した人が罰ゲーム！',
+  init(s){ s.innerHTML=`<div class="small">ウソを見抜け</div><div class="main">🤥</div>`; },
+  btn:'話す人を決める',
+  run(s){ s.innerHTML=`<div class="small">${pick(names())}さんが話す</div><div class="main pop">テーマ：${pick(USO)}</div><div class="penalty">外した人：${drink()}</div>`; }},
+];
+GAMES.push(...MORE);
+const LOVE = [
+ {id:'aishiteru',em:'💘',k:'love',name:'愛してるゲーム',c:'var(--pink)',desc:'照れたら負けの定番',
+  rule:'選ばれた2人が向かい合って、お題のセリフを交互に言い合う。照れたり笑ったりした方が負け！',
+  init(s){ s.innerHTML=`<div class="small">照れたら負け</div><div class="main">💘</div>`; },
+  btn:'2人とセリフを決める',
+  run(s){ const [a,b]=pair(); s.innerHTML=`<div class="small">${a} × ${b}</div><div class="main pop">「${pick(AISHI)}」</div><div class="penalty">照れた人：${drink()}</div>`; }},
+ {id:'koibana',em:'💬',k:'love',name:'恋バナ質問',c:'var(--pink)',desc:'答えるかパスして罰ゲーム',
+  rule:'選ばれた人が恋バナの質問に答える。答えたくなかったらパスOK、そのかわり罰ゲーム！',
+  init(s){ s.innerHTML=`<div class="small">恋バナタイム</div><div class="main">💬</div>`; },
+  btn:'質問を引く',
+  run(s){ s.innerHTML=`<div class="small">${pick(names())}さんへの質問</div><div class="main pop">${pick(KOIBANA)}</div><div class="penalty">パスするなら：${drink()}</div>`; }},
+ {id:'daiichi',em:'👀',k:'love',name:'第一印象ゲーム',c:'var(--blue)',desc:'みんなからの第一印象を発表',
+  rule:'選ばれた人について、みんながお題に沿って第一印象を一言ずつ言う。言われた人は感想を一言！',
+  init(s){ s.innerHTML=`<div class="small">ドキドキの答え合わせ</div><div class="main">👀</div>`; },
+  btn:'今回の人を選ぶ',
+  run(s){ s.innerHTML=`<div class="small">${pick(names())}さんの第一印象</div><div class="main pop">${pick(DAIICHI)}</div><div class="penalty">一番盛り上がった人に：${nonAlc?'みんなで拍手 👏':'みんなで乾杯 🥂'}</div>`; }},
+ {id:'aisho',em:'💞',k:'love',name:'相性チェック',c:'var(--mint)',desc:'2人の答えがそろうか',
+  rule:'選ばれた2人がお題に「せーの」で同時に答える。そろったら相性バッチリで周りが罰ゲーム、バラバラなら2人で罰ゲーム！',
+  init(s){ s.innerHTML=`<div class="small">2人の相性は…？</div><div class="main">💞</div>`; },
+  btn:'2人とお題を決める',
+  run(s){ const [a,b]=pair(); s.innerHTML=`<div class="small">${a} × ${b}</div><div class="main pop">${pick(AISHO)}</div><div class="penalty">そろわなかったら2人で：${drink()}</div>`; }},
+ {id:'kokuhaku',em:'🌹',k:'love',name:'告白セリフ',c:'var(--orange)',desc:'シチュエーション指定で告白',
+  rule:'選ばれた人が、指定のシチュエーションで隣の人に告白セリフ（演技）を言う。みんなが「キュンとした」と判定したらセーフ！',
+  init(s){ s.innerHTML=`<div class="small">演技力が試される</div><div class="main">🌹</div>`; },
+  btn:'シチュエーションを決める',
+  run(s){ s.innerHTML=`<div class="small">${pick(names())}さんが告白</div><div class="main pop">${pick(KOKUHAKU)}</div><div class="penalty">キュンとしなかったら：${drink()}</div>`; }},
+ {id:'couple',em:'💑',k:'love',name:'カップルクイズ',c:'var(--yellow)',desc:'相手のこと、どれだけ知ってる？',
+  rule:'カップルや仲良し2人向け。片方がお題について相手の答えを予想して言う。外したら罰ゲーム、当たったら交代！',
+  init(s){ s.innerHTML=`<div class="small">相手のこと、わかってる？</div><div class="main">💑</div>`; },
+  btn:'お題を出す',
+  run(s){ s.innerHTML=`<div class="small">相手の答えを当てて！</div><div class="main pop">${pick(COUPLE)}</div><div class="penalty">外したら：${drink()}</div>`; }},
+];
+const SMALL = [
+ {id:'dice',em:'🎲',k:'small',name:'サイコロ勝負',c:'var(--mint)',desc:'合計が一番小さい人が負け',
+  rule:'順番にサイコロ2個を振って、合計が一番小さかった人が罰ゲーム。ゾロ目が出たらその人以外が罰ゲーム！',
+  init(s){ this.r=[]; s.innerHTML=`<div class="small">${names2()[0]}さんから</div><div class="main">🎲🎲</div>`; $('gBtn').textContent=this.btn; },
+  btn:'サイコロを振る',
+  run(s){ const ps=names2();
+    if(this.r.length>=ps.length) this.r=[];
+    const d=[1+Math.floor(Math.random()*6),1+Math.floor(Math.random()*6)], F='⚀⚁⚂⚃⚄⚅'; const me=ps[this.r.length]; this.r.push(d);
+    let out=`<div class="small">${me}さんの結果</div><div class="main pop" style="font-size:64px">${F[d[0]-1]}${F[d[1]-1]}</div><div class="small">合計 ${d[0]+d[1]}${d[0]===d[1]?'　ゾロ目！🎉':''}</div>`;
+    if(d[0]===d[1]){ out+=`<div class="penalty">${me}さん以外：${drink()}</div>`; this.r=[]; $('gBtn').textContent='もう一回'; }
+    else if(this.r.length===ps.length){ const sums=this.r.map(x=>x[0]+x[1]), mn=Math.min(...sums); const losers=ps.filter((_,i)=>sums[i]===mn).join('、');
+      out+=`<div class="penalty">${ps.map((p,i)=>p+':'+sums[i]).join(' / ')}</div><div class="penalty">負け→ ${losers}さん：${drink()}</div>`; $('gBtn').textContent='もう一回'; }
+    else { $('gBtn').textContent=`${ps[this.r.length]}さんが振る`; }
+    s.innerHTML=out; }},
+ {id:'reflex',em:'⚡',k:'small',name:'早押し対決',c:'var(--yellow)',desc:'2人で反射神経バトル',
+  rule:'2人がスマホを挟んで向かい合う。画面が「押せ！」に変わったら自分側のボタンを先に押した方の勝ち。変わる前に押したらフライングで負け！',
+  init(s){ this.stop(); this.ph='idle'; const [a,b]=names2(); this.p=[a,b]; s.innerHTML=`<div class="small">準備ができたらスタート</div><div class="main">⚡</div>`; $('gBtn').textContent=this.btn; },
+  btn:'スタート',
+  draw(s,msg,bg){ s.style.background=bg||''; s.innerHTML=`<div class="main pop">${msg}</div><div class="sbtns"><button class="btn" data-act="0" style="padding:34px 0">${this.p[0]}</button><button class="btn" data-act="1" style="padding:34px 0;background:var(--blue)">${this.p[1]}</button></div>`; },
+  run(s){ this.stop(); this.ph='wait'; this.draw(s,'待て…'); this.t=setTimeout(()=>{ this.ph='go'; this.draw(s,'押せ！！','#1f6b4f'); },1500+Math.random()*3500); },
+  act(s,a){ if(this.ph!=='wait'&&this.ph!=='go') return; const i=+a, other=this.p[1-i];
+    const fly=this.ph==='wait'; this.stop(); this.ph='done'; s.style.background='';
+    s.innerHTML = fly ? `<div class="small">フライング！</div><div class="main pop">${this.p[i]}さんの負け</div><div class="penalty">${drink()}</div>` : `<div class="small">${this.p[i]}さんの勝ち！</div><div class="main pop">${other}さんの負け</div><div class="penalty">${drink()}</div>`;
+    $('gBtn').textContent='もう一回'; },
+  stop(){ if(this.t){clearTimeout(this.t);this.t=null;} const s=$('stage'); if(s) s.style.background=''; }},
+ {id:'twenty',em:'❓',k:'small',name:'20の質問',c:'var(--blue)',desc:'Yes/Noだけで答えを当てる',
+  rule:'出題者だけがお題を見る。ほかの人は「はい／いいえ」で答えられる質問を20回までして当てる。当てられなかったら回答者が罰ゲーム、当てたら出題者が罰ゲーム！',
+  init(s){ this.on=false; s.innerHTML=`<div class="small">出題者だけ見てね</div><div class="main">❓</div>`; $('gBtn').textContent=this.btn; },
+  btn:'お題を見る（出題者だけ）',
+  run(s){ this.on=!this.on;
+    if(this.on){ s.innerHTML=`<div class="small">出題者だけ 🤫</div><div class="main pop">${pick(TWENTY)}</div>`; $('gBtn').textContent='覚えた！隠して質問スタート'; }
+    else { s.innerHTML=`<div class="small">はい／いいえで答えられる質問を</div><div class="main pop">20回以内に当てろ！</div><div class="penalty">負けた側：${drink()}</div>`; $('gBtn').textContent='次のお題を見る'; } }},
+ {id:'yosou',em:'🔮',k:'small',name:'あの人はどっち？',c:'var(--orange)',desc:'相手の答えを予想する',
+  rule:'選ばれた人がどっちを選ぶか、ほかの人が予想して言う。本人が答えを発表して、外した人が罰ゲーム！',
+  init(s){ s.innerHTML=`<div class="small">どれだけわかってる？</div><div class="main">🔮</div>`; },
+  btn:'お題を出す',
+  run(s){ const p=pick(DOCCHI); s.innerHTML=`<div class="small">${pick(names2())}さんはどっち？</div><div class="main pop">${p[0]}<br><span style="font-size:18px;color:var(--mute)">or</span><br>${p[1]}</div><div class="penalty">外した人：${drink()}</div>`; }},
+ {id:'yubisuma',em:'👍',k:'small',name:'指スマ',c:'var(--pink)',desc:'立つ親指の数を当てる',
+  rule:'全員両手をグーにして親指を構える。親が「いっせーの、〇！」と数を言うと同時に、みんな好きな数の親指を立てる。立った親指の合計を当てたら親は片手を引っ込められる。先に両手がなくなった人の勝ち、最後まで残った人が罰ゲーム！',
+  init(s){ s.innerHTML=`<div class="small">2〜3人がちょうどいい</div><div class="main">👍</div>`; },
+  btn:'最初の親を決める',
+  run(s){ s.innerHTML=`<div class="small">最初の親は…</div><div class="main pop">${pick(names2())}さん</div><div class="penalty">最後まで残った人：${drink()}</div>`; }},
+ {id:'slot',em:'🎰',k:'small',name:'罰ゲームスロット',c:'var(--yellow)',desc:'誰が・何を・どうする',
+  rule:'スロットを回すと「誰が」「何を」が決まる。出た内容をそのまま実行！少人数で間が空いたときに。',
+  init(s){ s.innerHTML=`<div class="small">何が出るかな</div><div class="main">🎰</div>`; },
+  btn:'スロットを回す',
+  run(s){ const tok=this.tok=(this.tok||0)+1; let i=0;
+    const tick=()=>{ if(tok!==this.tok) return; const w=pick(names2()), t=pick(nonAlc?PEN_SOFT:SLOT);
+      s.innerHTML=`<div class="small">${i<12?'くるくる…':'結果は！'}</div><div class="main ${i<12?'':'pop'}">${w}さんが<br>${t}</div>`; if(++i<=12) setTimeout(tick,70+i*15); };
+    tick(); },
+  stop(){ this.tok=(this.tok||0)+1; }},
+];
+GAMES.push(...LOVE, ...SMALL);
+const EXTRA = [
+ {id:'oekaki',em:'🎨',name:'お絵かき当て',c:'var(--blue)',desc:'60秒で描いてみんなが当てる',
+  rule:'描く人だけがお題を見て、60秒でスマホに絵を描く。文字・数字はNG！時間内にみんなが当てられなかったら描いた人が罰ゲーム。',
+  init(s){ this.stop(); this.ph=0; s.innerHTML=`<div class="small">描く人だけ見てね</div><div class="main">🎨</div>`; $('gBtn').textContent=this.btn; },
+  btn:'お題を見る（描く人だけ）',
+  run(s){ this.stop();
+    if(this.ph===0){ this.w=pick(OEKAKI); this.ph=1; s.innerHTML=`<div class="small">描く人だけ 🤫</div><div class="main pop">${this.w}</div>`; $('gBtn').textContent='覚えた！描きはじめる'; return; }
+    if(this.ph===1){ this.ph=2; const st=Date.now();
+      s.innerHTML=`<div class="small" id="osec">のこり 60秒</div><canvas id="cv" width="600" height="600" style="width:100%;max-width:340px;aspect-ratio:1;background:#fff8ec;border-radius:16px;touch-action:none"></canvas><div class="sbtns"><button class="btn sub" data-act="clear">ぜんぶ消す</button></div><div class="timerbar" id="tb" style="width:100%"></div>`;
+      const cv=$('cv'), cx=cv.getContext('2d'); cx.lineWidth=10; cx.lineCap='round'; cx.lineJoin='round'; cx.strokeStyle='#1a1530'; let dn=false;
+      const pt=e=>{ const r=cv.getBoundingClientRect(); return [(e.clientX-r.left)*cv.width/r.width,(e.clientY-r.top)*cv.height/r.height]; };
+      cv.onpointerdown=e=>{ dn=true; cv.setPointerCapture(e.pointerId); const [x,y]=pt(e); cx.beginPath(); cx.moveTo(x,y); cx.lineTo(x+.1,y+.1); cx.stroke(); };
+      cv.onpointermove=e=>{ if(!dn) return; const [x,y]=pt(e); cx.lineTo(x,y); cx.stroke(); };
+      cv.onpointerup=cv.onpointercancel=()=>{ dn=false; };
+      this.t=setInterval(()=>{ const r=60-(Date.now()-st)/1000, tb=$('tb'), o=$('osec'); if(!tb){this.stop();return;} tb.style.width=Math.max(0,r/60*100)+'%'; o.textContent= r>0?`のこり ${Math.ceil(r)}秒`:'タイムアップ！'; if(r<=0) this.stop(); },200);
+      $('gBtn').textContent='答えを見る'; return; }
+    this.ph=0; const sm=s.querySelector('#osec'); if(sm) sm.textContent=`答えは「${this.w}」`;
+    s.insertAdjacentHTML('beforeend',`<div class="penalty pop">当てられなかったら描いた人：${drink()}</div>`); $('gBtn').textContent='次のお題を見る'; },
+  act(s,a){ if(a==='clear'){ const cv=$('cv'); cv.getContext('2d').clearRect(0,0,cv.width,cv.height); } },
+  stop(){ if(this.t){clearInterval(this.t);this.t=null;} }},
+ {id:'quiz',em:'🧠',name:'雑学クイズ',c:'var(--mint)',desc:'早い者勝ちで答える',
+  rule:'問題が出たら、わかった人から手を挙げて答える。正解した人が好きな人を1人指名して罰ゲーム！',
+  init(s){ this.a=null; s.innerHTML=`<div class="small">わかった人から答えて</div><div class="main">🧠</div>`; $('gBtn').textContent=this.btn; },
+  btn:'問題を出す',
+  run(s){ if(this.a){ s.insertAdjacentHTML('beforeend',`<div class="penalty pop">答え：${this.a}</div>`); this.a=null; $('gBtn').textContent='次の問題'; return; }
+    const q=pick(QUIZ); this.a=q[1]; s.innerHTML=`<div class="small">雑学クイズ</div><div class="main pop" style="font-size:24px">${q[0]}</div><div class="penalty">正解者が指名した人：${drink()}</div>`; $('gBtn').textContent='答えを見る'; }},
+ {id:'dengon',em:'📞',name:'伝言ゲーム',c:'var(--orange)',desc:'耳打ちで正しく伝わるか',
+  rule:'最初の人だけが文章を見て、隣の人に耳打ちで伝えていく。最後の人が声に出して発表！ズレてたら、どこで変わったか犯人探しをして、犯人が罰ゲーム。',
+  init(s){ this.a=null; s.innerHTML=`<div class="small">最初の人だけ見てね</div><div class="main">📞</div>`; $('gBtn').textContent=this.btn; },
+  btn:'文章を見る（最初の人だけ）',
+  run(s){ if(this.a){ s.innerHTML=`<div class="small">正解は…</div><div class="main pop" style="font-size:22px">${this.a}</div><div class="penalty">犯人：${drink()}</div>`; this.a=null; $('gBtn').textContent='次の文章を見る'; return; }
+    this.a=pick(DENGON); s.innerHTML=`<div class="small">最初の人だけ 🤫 覚えたら隠してね</div><div class="main pop" style="font-size:22px">${this.a}</div>`; $('gBtn').textContent='最後の人が言ったら答え合わせ'; }},
+ {id:'senshuken',em:'🏆',name:'〇〇選手権',c:'var(--yellow)',desc:'セリフで一番を決める',
+  rule:'お題のセリフを全員が順番に演じて、審査員がNo.1を決める。最下位は罰ゲーム！',
+  init(s){ s.innerHTML=`<div class="small">誰が一番うまい？</div><div class="main">🏆</div>`; },
+  btn:'お題と審査員を決める',
+  run(s){ s.innerHTML=`<div class="small">審査員：${pick(names())}さん</div><div class="main pop">${pick(SENSHU)}選手権</div><div class="penalty">最下位：${drink()}</div>`; }},
+ {id:'nearpin',em:'📏',m:1,name:'数字ニアピン',c:'var(--blue)',desc:'一番遠かった人が負け',
+  rule:'問題の答えの数字を全員が予想して言う。答えを見て、一番遠かった人が罰ゲーム。ぴったり当てた人がいたらその人以外全員で！',
+  init(s){ this.a=null; s.innerHTML=`<div class="small">だいたいでOK</div><div class="main">📏</div>`; $('gBtn').textContent=this.btn; },
+  btn:'問題を出す',
+  run(s){ if(this.a){ s.insertAdjacentHTML('beforeend',`<div class="penalty pop">答え：${this.a}</div>`); this.a=null; $('gBtn').textContent='次の問題'; return; }
+    const q=pick(NEARPIN); this.a=q[1]; s.innerHTML=`<div class="small">数字を予想して！</div><div class="main pop" style="font-size:24px">${q[0]}</div><div class="penalty">一番遠かった人：${drink()}</div>`; $('gBtn').textContent='答えを見る'; }},
+ {id:'anzan',em:'🧮',m:1,name:'暗算バトル',c:'var(--pink)',desc:'酔ってても計算できる？',
+  rule:'問題が出たら、わかった人から答える。一番遅かった人・間違えた人が罰ゲーム！',
+  init(s){ this.a=null; s.innerHTML=`<div class="small">酔ってても解ける？</div><div class="main">🧮</div>`; $('gBtn').textContent=this.btn; },
+  btn:'問題を出す',
+  run(s){ if(this.a!==null){ s.insertAdjacentHTML('beforeend',`<div class="penalty pop">答え：${this.a}</div>`); this.a=null; $('gBtn').textContent='次の問題'; return; }
+    const r=n=>Math.floor(Math.random()*n); let q;
+    const t=r(3); if(t===0){const a=10+r(90),b=10+r(90); q=`${a} + ${b}`; this.a=a+b;}
+    else if(t===1){const a=50+r(50),b=10+r(40); q=`${a} − ${b}`; this.a=a-b;}
+    else {const a=11+r(19),b=2+r(8); q=`${a} × ${b}`; this.a=a*b;}
+    s.innerHTML=`<div class="small">わかった人から！</div><div class="main pop" style="font-size:44px">${q} = ?</div><div class="penalty">一番遅かった人：${drink()}</div>`; $('gBtn').textContent='答えを見る'; }},
+ {id:'yesno',em:'🙅',m:1,name:'はい・いいえ禁止',c:'var(--orange)',desc:'質問攻めに耐えろ',
+  rule:'選ばれた人に、みんなで30秒間どんどん質問する。「はい」「いいえ」「うん」「ううん」を言っちゃったら負け！首を振るのもNG。',
+  init(s){ s.innerHTML=`<div class="small">うっかり言わないように</div><div class="main">🙅</div>`; },
+  btn:'答える人を決める',
+  run(s){ s.innerHTML=`<div class="small">30秒間、質問攻め！</div><div class="main pop">${pick(names())}さん</div><div class="small" style="margin-top:12px">最初の質問例：「${pick(YESNO)}」</div><div class="penalty">言っちゃったら：${drink()}</div>`; }},
+ {id:'silent',em:'🤫',m:1,name:'サイレントしりとり',c:'var(--mint)',desc:'声を出さずにしりとり',
+  rule:'声を出さずに、ジェスチャーだけでしりとりをする。次の人は前の人の言葉を声に出して確認してから自分の番。間違えたら罰ゲーム！',
+  init(s){ s.innerHTML=`<div class="small">しゃべったら負け</div><div class="main">🤫</div>`; },
+  btn:'最初の言葉を決める',
+  run(s){ s.innerHTML=`<div class="small">${pick(names())}さんからスタート</div><div class="main pop">「${pick(['りんご','ごりら','らっぱ','パンダ','すいか','ねこ','さかな','バナナ'])}」から</div><div class="penalty">間違えた人：${drink()}</div>`; }},
+ {id:'type',em:'💗',k:'love',name:'どっちがタイプ？',c:'var(--pink)',desc:'好みの少数派が負け',
+  rule:'2択のお題が出たら「せーの」でどっちがタイプか指で示す。少数派が罰ゲーム！選んだ理由も発表しよう。',
+  init(s){ s.innerHTML=`<div class="small">あなたのタイプは？</div><div class="main">💗</div>`; },
+  btn:'お題を出す',
+  run(s){ const p=pick(TYPE2); s.innerHTML=`<div class="small">せーので！</div><div class="main pop">👈 ${p[0]}<br><span style="font-size:18px;color:var(--mute)">or</span><br>${p[1]} 👉</div><div class="penalty">少数派：${drink()}</div>`; }},
+ {id:'shinri',em:'🔮',k:'love',name:'恋愛心理テスト',c:'var(--blue)',desc:'選んだ答えで恋愛傾向がわかる…かも',
+  rule:'選ばれた人が直感で答えを選ぶ。結果をみんなで読んで盛り上がろう！（あくまで遊びの心理テストです）',
+  init(s){ s.innerHTML=`<div class="small">直感で選んでね</div><div class="main">🔮</div>`; },
+  btn:'テストを出す',
+  run(s){ const q=pick(SHINRI); this.q=q; s.innerHTML=`<div class="small">${pick(names())}さん、直感で！</div><div class="main pop" style="font-size:20px">${q.q}</div><div style="display:grid;gap:8px;width:100%;margin-top:14px">${q.o.map((o,i)=>`<button class="btn sub" data-act="${i}" style="white-space:normal">${'ABCD'[i]}. ${o}</button>`).join('')}</div>`; },
+  act(s,a){ const q=this.q; if(!q) return; s.innerHTML=`<div class="small">${'ABCD'[+a]}を選んだあなたは…</div><div class="main pop" style="font-size:20px">${q.r[+a]}</div><div class="penalty">当たってたら：${nonAlc?'みんなで拍手 👏':'みんなで乾杯 🥂'}</div>`; this.q=null; }},
+ {id:'janken',em:'✊',k:'small',name:'こっそりじゃんけん',c:'var(--yellow)',desc:'スマホ1台で2人じゃんけん',
+  rule:'1人目がこっそり手を選んで、スマホを2人目に渡す。2人目も選ぶと結果が出ます。3回勝負で負け越した人が罰ゲーム！',
+  init(s){ const [a,b]=names2(); this.p=[a,b]; this.w=[0,0]; this.ask(s,0); },
+  btn:'リセット',
+  ask(s,i){ this.i=i; s.innerHTML=`<div class="small">${this.p[0]} ${this.w[0]} - ${this.w[1]} ${this.p[1]}</div><div class="main pop">${this.p[i]}さん<br>こっそり選んで</div><div class="sbtns">${['✊','✌️','✋'].map((h,k)=>`<button class="btn sub" data-act="${k}" style="font-size:36px">${h}</button>`).join('')}</div>`; },
+  run(s){ this.init(s); },
+  act(s,a){ if(this.i===0){ this.h0=+a; this.ask(s,1); return; } if(this.i!==1) return; this.i=2;
+    const h1=+a, H=['✊','✌️','✋']; let msg;
+    if(h1===this.h0) msg='あいこ！もう一回';
+    else { const win = (this.h0+1)%3===h1 ? 0 : 1; this.w[win]++; msg=`${this.p[win]}さんの勝ち！`; }
+    const done=this.w[0]===2||this.w[1]===2;
+    s.innerHTML=`<div class="main pop" style="font-size:52px">${H[this.h0]} vs ${H[h1]}</div><div class="small">${msg}　${this.w[0]} - ${this.w[1]}</div>${done?`<div class="penalty">${this.p[this.w[0]===2?1:0]}さん：${drink()}</div>`:`<div class="sbtns"><button class="btn" data-act="next">次の勝負</button></div>`}`;
+    if(done){ this.w=[0,0]; $('gBtn').textContent='もう一回'; } },
+  },
+ {id:'bj',em:'🂡',k:'small',name:'ブラックジャック',c:'var(--mint)',desc:'21に近い方が勝ち',
+  rule:'順番にカードを引いて、合計を21に近づける。21を超えたらバースト（負け）。全員が止めたら、一番21から遠い人・バーストした人が罰ゲーム！A＝1か11、J/Q/K＝10。',
+  init(s){ this.ps=names2(); this.h=this.ps.map(()=>[c13(),c13()]); this.i=0; this.draw(s); $('gBtn').textContent='ヒット（引く）'; $('gBtn2').textContent='スタンド（止める）'; },
+  btn:'ヒット（引く）', btn2:'スタンド（止める）',
+  val(h){ let v=h.reduce((t,c)=>t+Math.min(10,c),0); if(h.includes(1)&&v+10<=21) v+=10; return v; },
+  draw(s,msg){ const rows=this.ps.map((p,k)=>`<div style="font-size:15px;margin:4px 0;${k===this.i?'color:var(--c);font-weight:800':''}">${k===this.i?'▶ ':''}${p}：${this.h[k].map(c=>CARD[c]).join(' ')}（${this.val(this.h[k])}）</div>`).join('');
+    s.innerHTML=`<div class="small">${msg||(this.i<this.ps.length?this.ps[this.i]+'さんの番':'')}</div>${rows}`; },
+  next(s){ this.i++; if(this.i<this.ps.length){ this.draw(s); return; }
+    const sc=this.ps.map((_,k)=>{const v=this.val(this.h[k]); return v>21?-1:v;}); const mn=Math.min(...sc);
+    const losers=this.ps.filter((_,k)=>sc[k]===mn).join('、');
+    this.draw(s,'結果発表！'); s.insertAdjacentHTML('beforeend',`<div class="penalty pop">負け→ ${losers}さん：${drink()}</div>`);
+    $('gBtn').textContent='もう一回'; $('gBtn2').style.display='none'; },
+  run(s){ if(this.i>=this.ps.length){ this.init(s); $('gBtn2').style.display='block'; return; }
+    this.h[this.i].push(c13()); const v=this.val(this.h[this.i]); if(v>=21){ this.draw(s); this.next(s); } else this.draw(s); },
+  run2(s){ if(this.i<this.ps.length) this.next(s); }},
+];
+EXTRA.find(g=>g.id==='janken').act = (function(orig){ return function(s,a){ if(a==='next'){ this.ask(s,0); return; } orig.call(this,s,a); }; })(EXTRA.find(g=>g.id==='janken').act);
+GAMES.push(...EXTRA);
+const c13=()=>1+Math.floor(Math.random()*13);
+const OEKAKI=['キリン','東京タワー','たこ焼き','雪だるま','ドラムセット','観覧車','ペンギン','自転車','カタツムリ','おにぎり','新幹線','サンタクロース','富士山','ハンバーガー','ゾウ','傘','ロケット','カメラ','花火','かき氷'];
+const QUIZ=[['パンダのしっぽの色は？','白'],['日本で一番長い川は？','信濃川'],['日本で一番大きい湖は？','琵琶湖'],['タコの心臓はいくつ？','3つ'],['面積が世界一大きい国は？','ロシア'],['お寿司の「ガリ」の正体は？','生姜'],['1ダースは何個？','12個'],['七福神で唯一、日本生まれの神様は？','恵比寿'],['1回目の東京オリンピックは何年？','1964年'],['富士山がまたがっている2つの県は？','静岡県と山梨県'],['シマウマの毛の下の肌の色は？','黒'],['イルカは何類？','哺乳類'],['ハワイ語で「ありがとう」は？','マハロ'],['トランプのジョーカーを除いた枚数は？','52枚'],['ピアノの鍵盤の数（標準）は？','88鍵'],['将棋で1人が最初に持つ駒の数は？','20枚'],['「鮭」の読み方は？','さけ（しゃけ）'],['太陽系の惑星はいくつ？','8つ']];
+const DENGON=['となりのトトロ…じゃなくて、となりの田中くんが昨日コンビニでプリンを3個買った','月曜日の2限の英語の先生は、実は猫を5匹飼っていて全員の名前がフルーツ','サークルの合宿で海に行ったら、タコに追いかけられて先輩が靴を片方なくした','駅前の新しいラーメン屋は、替え玉が無料だけどなぜかチャーシューが星の形','バイト先の店長が、誕生日に自分で自分にケーキを買ってきて一人で歌っていた','明日の飲み会は7時に駅の北口集合で、遅れた人は全員にからあげを1個ずつおごる'];
+const SENSHU=['一番おいしそうな「いただきます」','一番申し訳なさそうな「ごめんね」','一番寝起きっぽい「もしもし」','一番かっこいい自己紹介','一番かわいい「にゃー」','一番迫力のある「がんばれ！」','一番ウザい「おはよう」','一番感動的な「ありがとう」','一番テンションの高い「かんぱーい！」','一番悲しそうな「単位落とした」'];
+const NEARPIN=[['富士山の高さは何メートル？','3,776m'],['東京スカイツリーの高さは何メートル？','634m'],['東京タワーの高さは何メートル？','333m'],['1年は何時間？（うるう年じゃない年）','8,760時間'],['1日は何秒？','86,400秒'],['山手線の駅はいくつ？','30駅'],['大人の骨の数はだいたいいくつ？','約206本'],['月までの距離は約何万km？','約38万km'],['地球の赤道一周は約何km？','約4万km'],['大人の歯は親知らずを入れて何本？','32本'],['陸上トラック1周は何メートル？','400m'],['サッカーの試合時間は前後半合わせて何分？','90分'],['琵琶湖の面積は約何km²？','約670km²']];
+const YESNO=['大学生ですか？','今日楽しい？','お酒好き？','恋人いる？','朝ごはん食べた？','犬派？','明日バイト？','今眠い？'];
+const TYPE2=[['年上','年下'],['優しい人','おもしろい人'],['インドア派','アウトドア派'],['毎日会いたい','週1くらいがちょうどいい'],['尽くしたい','尽くされたい'],['ギャップがある人','裏表がない人'],['LINEがマメな人','会ったときに優しい人'],['同じ趣味の人','違う趣味の人'],['しっかり者','ちょっと抜けてる人'],['リードしてくれる人','ついてきてくれる人']];
+const SHINRI=[
+ {q:'森を歩いていたら小屋を見つけた。ドアの色は？',o:['赤','青','白','黒'],r:['情熱的な恋をするタイプ。好きになったら一直線！','落ち着いた恋が好き。じっくり仲良くなる派。','理想が高めのロマンチスト。運命の出会いを待ってる。','クールに見えて実は一途。心を開いた相手にはとことん尽くす。']},
+ {q:'無人島に1つだけ持っていくなら？',o:['ナイフ','スマホ','好きな人の写真','本'],r:['頼れるリーダータイプ。恋人を引っ張っていきたい派。','寂しがり屋で連絡はマメにしたい。','恋人が生きる力になるタイプ。愛情深い。','自分の時間も大事にしたい、ほどよい距離感が好き。']},
+ {q:'デートの待ち合わせ。相手が来ない。何分待つ？',o:['5分','15分','30分','来るまで待つ'],r:['サバサバ系。恋愛でも自分のペースを大事にする。','バランス型。相手にも自分にも優しい。','包容力あり。相手の失敗も笑って許せる。','超一途！ちょっと重いと言われることも…？']},
+ {q:'好きな飲み物を1つ選ぶなら？',o:['コーヒー','ジュース','お茶','炭酸水'],r:['大人っぽい恋に憧れるタイプ。','甘えたがりで、かわいがられたい派。','安心感重視。一緒にいて落ち着く人が好き。','刺激を求める恋愛体質。新しい出会いにワクワク。']},
+ {q:'夜空を見上げたら何が見えた？',o:['満月','流れ星','たくさんの星','雲'],r:['恋愛に満たされたい気持ちが強め。','一瞬の出会いを大切にするロマンチスト。','みんなから好かれる人気者タイプ。','今は恋より友達や趣味を楽しみたい時期かも。']},
+];
+function pair(){ const ps=names(); const a=Math.floor(Math.random()*ps.length); let b; do{b=Math.floor(Math.random()*ps.length)}while(b===a); return [ps[a],ps[b]]; }
+function names2(){ return players.length>=2 ? players.slice(0,3).map(esc) : ['プレイヤー1','プレイヤー2']; }
+const AISHI=['愛してる','好きだよ','ずっと一緒にいて','付き合ってください','今日かわいいね／かっこいいね','会いたかった','君しか見えない','結婚しよ'];
+const KOIBANA=['理想のタイプは？','初恋はいつ？どんな人？','好きな人にされたら嬉しいLINEは？','初デートで行きたい場所は？','恋人に求める条件を3つ','付き合うまでに何回デートする派？','キュンとする仕草は？','告白はする派？される派？','今までで一番キュンとした瞬間は？','恋人とケンカしたら先に謝る派？','理想のプロポーズは？','芸能人で言うと誰がタイプ？'];
+const DAIICHI=['動物に例えると？','初めて会ったときの印象を一言で','どんな恋人になりそう？','実は〇〇っぽい、と思ったところ','どんなバイトしてそう？','休日の過ごし方を予想','モテそうなポイントは？','ギャップを感じたところは？'];
+const AISHO=['デートで行くなら？','好きな季節は？','好きなおにぎりの具は？','一緒に旅行するならどこ？','2人で食べたいご飯は？','好きな色は？','カラオケで最初に歌うジャンルは？','理想の休日の過ごし方は？'];
+const KOKUHAKU=['関西弁で','ツンデレ風に','卒業式の日の校舎裏で','雨の日の相合傘で','観覧車のてっぺんで','執事・メイド風に','10年ぶりに再会した幼なじみとして','ラップ調で','韓国ドラマ風に','終電間際の駅のホームで'];
+const COUPLE=['相手の好きな食べ物は？','相手の一番好きなお菓子は？','相手が今一番欲しいものは？','相手の得意料理は？','相手の子どもの頃の夢は？','相手の好きな映画は？','相手が一番落ち着く場所は？','相手が最近ハマってることは？','相手の初めてのバイトは？','相手のスマホの待ち受けは？'];
+const TWENTY=['ペンギン','冷蔵庫','東京タワー','ライオン','消しゴム','富士山','たこ焼き','スマホの充電器','自動販売機','サンタクロース','観覧車','カップラーメン','傘','ハムスター','信号機','図書館'];
+const SLOT=['ひと口飲む','右隣の人と乾杯','一発ギャグ','好きなタイプを発表','モノマネを1つ','変顔で写真を撮られる','最近のスマホの写真を1枚見せる','10秒間ウインクし続ける','全力で褒めちぎる','語尾を「ござる」にする'];
+['ten','hilo'].forEach(id=>{ const g=GAMES.find(x=>x.id===id); if(g) g.m=1; });
+const BANANA=['バナナ','ビール','大学','夏','サークル','カラオケ','終電','焼肉','テスト','雪','ディズニー','スマホ'];
+const GESTURE=['サーフィン','ゴリラ','歯みがき','ボウリング','寿司職人','満員電車','バスケのシュート','花火','ラーメンをすする','ペンギン','ヨガ','DJ','ゾンビ','告白','自撮り','雪かき','ピアノ','忍者'];
+const HAYAKUCHI=['生麦生米生卵','隣の客はよく柿食う客だ','東京特許許可局','赤巻紙青巻紙黄巻紙','バスガス爆発','坊主が屏風に上手に坊主の絵を描いた','新設診察室視察','老若男女','骨粗鬆症訴訟勝訴','この竹垣に竹立てかけたのは竹立てかけたかったから竹立てかけた','すももももももものうち','魔術師見習い手術中'];
+const ISHIN=['「白い食べ物」といえば？','「夏」といえば？','「大学生のバイト」といえば？','「赤いもの」といえば？','「お酒のつまみ」といえば？','「ジブリ」といえば？','「コンビニスイーツ」といえば？','「動物園の人気者」といえば？','「サークルの合宿先」といえば？','「冬のスポーツ」といえば？','「ラーメンの味」といえば？','「朝ごはん」といえば？'];
+const SHIBARI=['3文字の言葉だけ','食べ物だけ','カタカナ語だけ','生き物だけ','4文字の言葉だけ','地名だけ','人の名前（有名人）だけ','学校にあるものだけ','英語だけ','ひと文字目が濁点の言葉だけ'];
+const SAKASA=['しんかんせん','ほうれんそう','カツカレー','たまごかけごはん','ジェットコースター','チョコレート','いちごだいふく','ミルクティー','サッカーボール','おこのみやき','カンパイ','スマートフォン'];
+const USO=['小学生のころの自分','好きな食べ物','バイトの話','今までの恋愛','特技','家族のこと','最近の休日','苦手なもの','地元のこと','高校時代'];
+function names(){ return players.length>=3 ? players.map(esc) : ['プレイヤー1','プレイヤー2','プレイヤー3','プレイヤー4']; }
+const CARD=['','A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+const rnd13=()=>1+Math.floor(Math.random()*13);
+
+// ---------- render ----------
+function renderPlayers(){
+  $('plist').innerHTML = players.map((p,i)=>`<span class="pchip">${esc(p)}<button data-i="${i}" aria-label="削除">✕</button></span>`).join('');
+  $('plist').querySelectorAll('button').forEach(b=>b.onclick=()=>{players.splice(+b.dataset.i,1);save();renderPlayers();});
+}
+function esc(t){return t.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function addPlayer(){ const v=$('pname').value.trim(); if(!v) return; players.push(v); $('pname').value=''; save(); renderPlayers(); }
+$('padd').onclick=addPlayer;
+$('pname').addEventListener('keydown',e=>{ if(e.key==='Enter' && !e.isComposing) addPlayer(); });
+
+function renderNonAlc(){ $('nonAlc').textContent = '🧃 ノンアルモード：'+(nonAlc?'ON':'OFF'); $('nonAlc').classList.toggle('on',nonAlc); }
+$('nonAlc').onclick=()=>{ nonAlc=!nonAlc; save(); renderNonAlc(); };
+
+let cur=null;
+function renderGrid(f){
+  const list = GAMES.filter(g=> f==='all' || (f==='minor'&&g.m) || (f==='std'&&!g.m&&!g.k) || (g.k&&g.k===f));
+  const BADGE={love:'合コン',small:'2〜3人'};
+  $('grid').innerHTML = list.map(g=>`<button class="game" style="--c:${g.c}" data-id="${g.id}">${g.m?'<span class="badge">マイナー</span>':g.k?`<span class="badge">${BADGE[g.k]}</span>`:''}<div class="em">${g.em}</div><b>${g.name}</b><span>${g.desc}</span></button>`).join('');
+  $('grid').querySelectorAll('.game').forEach(el=>el.onclick=()=>openGame(el.dataset.id));
+}
+$('filters').querySelectorAll('.chip').forEach(c=>c.onclick=()=>{ $('filters').querySelectorAll('.chip').forEach(x=>x.classList.toggle('on',x===c)); renderGrid(c.dataset.f); });
+renderGrid('all');
+$('stage').addEventListener('click',e=>{ const b=e.target.closest('[data-act]'); if(b&&cur&&cur.act) cur.act($('stage'),b.dataset.act,b); });
+$('stage').addEventListener('keydown',e=>{ if(e.key==='Enter'&&e.target.id==='nb'&&cur&&cur.act) cur.act($('stage')); });
+
+function openGame(id){
+  if(cur&&cur.stop) cur.stop();
+  cur = GAMES.find(g=>g.id===id);
+  document.documentElement.style.setProperty('--c',cur.c);
+  $('screen').style.setProperty('--c',cur.c);
+  $('gEm').textContent=cur.em; $('gTitle').textContent=cur.name; $('gRule').textContent=cur.rule;
+  $('gBtn').textContent=cur.btn;
+  const s=$('stage'); s.className='stage'; cur.init(s);
+  $('gBtn2').style.display = cur.btn2 ? 'block' : 'none'; $('gBtn2').textContent = cur.btn2||'';
+  $('home').style.display='none'; $('screen').style.display='block'; window.scrollTo(0,0);
+}
+$('gBtn').onclick=()=>cur.run($('stage'));
+$('gBtn2').onclick=()=>cur.run2 && cur.run2($('stage'));
+$('back').onclick=()=>{ if(cur&&cur.stop) cur.stop(); $('screen').style.display='none'; $('home').style.display='block'; };
+
+renderPlayers(); renderNonAlc();
+</script>
+</body>
+</html>
