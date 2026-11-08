@@ -535,6 +535,178 @@ const EXTRA = [
 ];
 EXTRA.find(g=>g.id==='janken').act = (function(orig){ return function(s,a){ if(a==='next'){ this.ask(s,0); return; } orig.call(this,s,a); }; })(EXTRA.find(g=>g.id==='janken').act);
 GAMES.push(...EXTRA);
+
+// ---------- カメラゲーム ----------
+const CAM={stream:null,facing:null,video:null};
+async function camOpen(facing){
+  if(CAM.stream&&CAM.facing===facing) return; camClose();
+  CAM.stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:facing,width:{ideal:720},height:{ideal:720}},audio:false}); CAM.facing=facing;
+  if(!CAM.video){ CAM.video=document.createElement('video'); CAM.video.muted=true; CAM.video.playsInline=true; CAM.video.setAttribute('playsinline',''); }
+  CAM.video.srcObject=CAM.stream; await CAM.video.play();
+}
+function camClose(){ if(CAM.stream){ CAM.stream.getTracks().forEach(t=>t.stop()); CAM.stream=null; CAM.facing=null; } }
+function camMount(el,mirror){ const v=CAM.video; v.style.cssText=`width:100%;border-radius:16px;display:block;background:#000;transform:${mirror?'scaleX(-1)':'none'}`; el.appendChild(v); }
+function camSnap(mirror,size){ size=size||480; const v=CAM.video, c=document.createElement('canvas'), w=v.videoWidth, h=v.videoHeight, sq=Math.min(w,h); c.width=c.height=size; const x=c.getContext('2d'); if(mirror){ x.translate(size,0); x.scale(-1,1); } x.drawImage(v,(w-sq)/2,(h-sq)/2,sq,sq,0,0,size,size); return c; }
+function camErr(s){ s.innerHTML=`<div class="small">カメラが使えませんでした</div><div class="main" style="font-size:20px">ブラウザの設定でこのサイトのカメラを許可して、もう一度試してね</div>`; $('gBtn').textContent='もう一回'; }
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const HENKAO=['宝くじが外れた顔','レモンを丸かじりした顔','単位を落としたと知った顔','寝坊に気づいた顔','推しに会えた顔','激辛を食べた顔','授業中に先生に当てられた顔','終電を逃した顔','おばけを見た顔','告白が成功した顔','苦い薬を飲んだ顔','全力のドヤ顔','くしゃみが出そうで出ない顔','財布を忘れたと気づいた顔'];
+const CAMG=[
+ {id:'henkao',em:'🤪',cam:1,name:'変顔バトル',c:'var(--yellow)',desc:'撮って投票、一番ウケたのは？',
+  rule:'お題の変顔を1人ずつ撮影。全員撮ったら、一番おもしろい写真をみんなでタップして投票！一番票が少なかった人が罰ゲーム。最後に全員の写真を1枚にまとめて保存できます。',
+  init(s){ this.stop(); this.busy=false; this.ps=names(); this.i=0; this.ph=[]; this.theme=pick(HENKAO);
+    s.innerHTML=`<div class="small">お題</div><div class="main pop" style="font-size:24px">${this.theme}</div><div class="sbtns"><button class="btn" data-act="open">📷 カメラを起動</button></div>`; $('gBtn').textContent=this.btn; },
+  btn:'お題を変える',
+  run(s){ if(!this.busy) this.init(s); },
+  shoot(s){ s.innerHTML=`<div class="small">お題：${this.theme}</div><div id="camwrap" style="width:100%"></div><div class="sbtns"><button class="btn" data-act="snap">📸 ${this.ps[this.i]}さん撮影（3秒後）</button></div>`; camMount($('camwrap'),true); },
+  gallery(s){ camClose(); s.innerHTML=`<div class="small">一番おもしろい写真をタップして投票！</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;margin-top:10px">${this.ph.map((p,k)=>`<button data-act="vote${k}" style="background:none;border:none;padding:0;position:relative;cursor:pointer"><img src="${p.url}" style="width:100%;border-radius:12px;display:block"><span style="position:absolute;left:6px;bottom:6px;background:#000a;color:#fff;border-radius:99px;padding:2px 8px;font-size:12px">${p.name}</span><span id="v${k}" style="position:absolute;right:6px;top:6px;background:var(--pink);color:#fff;border-radius:99px;padding:2px 8px;font-size:13px;font-weight:800">${p.v}票</span></button>`).join('')}</div><div class="sbtns"><button class="btn" data-act="result">結果発表</button></div>`; },
+  collage(){ const n=this.ph.length, cols=n<=4?2:3, rows=Math.ceil(n/cols), S=360, T=70, c=document.createElement('canvas'); c.width=cols*S; c.height=rows*S+T; const x=c.getContext('2d');
+    x.fillStyle='#14101f'; x.fillRect(0,0,c.width,c.height); x.fillStyle='#ffd23f'; x.font='bold 30px sans-serif'; x.textAlign='center'; x.fillText('変顔バトル：'+this.theme, c.width/2, 46);
+    this.ph.forEach((p,k)=>{ const X=(k%cols)*S, Y=T+Math.floor(k/cols)*S; x.drawImage(p.cv,X+6,Y+6,S-12,S-12); x.fillStyle='#000a'; x.fillRect(X+6,Y+S-48,S-12,42); x.fillStyle='#fff'; x.font='bold 24px sans-serif'; x.fillText(p.name+'（'+p.v+'票）',X+S/2,Y+S-18); });
+    return c.toDataURL('image/jpeg',0.85); },
+  async act(s,a){
+    if(this.busy) return;
+    if(a==='open'){ try{ await camOpen('user'); }catch(e){ camErr(s); return; } this.shoot(s); return; }
+    if(a==='snap'){ this.busy=true; const b=s.querySelector('[data-act="snap"]'); for(let c=3;c>0;c--){ b.textContent=c; await sleep(800); } b.textContent='📸 パシャ！';
+      const cv=camSnap(true); this.ph.push({name:this.ps[this.i],cv,url:cv.toDataURL('image/jpeg',0.8),v:0}); this.i++; await sleep(300); this.busy=false;
+      if(this.i<this.ps.length) this.shoot(s); else this.gallery(s); return; }
+    if(a.startsWith('vote')){ const k=+a.slice(4); this.ph[k].v++; $('v'+k).textContent=this.ph[k].v+'票'; return; }
+    if(a==='result'){ const vs=this.ph.map(p=>p.v), mx=Math.max(...vs), mn=Math.min(...vs);
+      const top=this.ph.filter(p=>p.v===mx).map(p=>p.name).join('、'), low=this.ph.filter(p=>p.v===mn).map(p=>p.name).join('、'), col=this.collage();
+      s.innerHTML=`<img src="${col}" style="width:100%;border-radius:12px"><div class="penalty pop">👑 変顔王：${top}さん</div>${mx!==mn?`<div class="penalty pop">一番票が少なかった ${low}さん：${drink()}</div>`:`<div class="penalty pop">全員同票！みんなで${nonAlc?'拍手 👏':'乾杯 🥂'}</div>`}<div class="sbtns"><a class="btn sub" href="${col}" download="henkao.jpg" style="text-decoration:none;text-align:center">📥 写真を保存</a></div>`;
+      $('gBtn').textContent='もう一回'; } },
+  stop(){ camClose(); }},
+ {id:'freeze',em:'🗿',cam:1,name:'動いたら負け',c:'var(--blue)',desc:'カメラが動いた人を見つける',
+  rule:'スマホを立てて、全員が画面に映るように横に並ぶ（画面の線で区切られた枠に1人ずつ）。「ストップ！」が出たら3秒間ピタッと止まる。カメラが一番動いた人を見つけて、その人が罰ゲーム！動きすぎ判定が厳しい・甘いときは感度ボタンで調整してね。',
+  LV:[['やさしい',0.07],['ふつう',0.04],['きびしい',0.02]],
+  init(s){ this.stop(); this.lv=this.lv??1; this.ps = players.length>=2 ? players.slice(0,5).map(esc) : ['左の人','真ん中の人','右の人']; this.n=this.ps.length; this.phase='idle';
+    s.innerHTML=`<div class="small">${this.n}人用（左から ${this.ps.join('・')}）</div><div class="main">🗿</div><div class="sbtns"><button class="btn" data-act="open">📷 カメラを起動</button></div>`;
+    $('gBtn').textContent=this.btn; $('gBtn2').textContent='感度：'+this.LV[this.lv][0]; },
+  btn:'リセット', btn2:'感度：ふつう',
+  run(s){ this.init(s); },
+  run2(){ this.lv=(this.lv+1)%3; $('gBtn2').textContent='感度：'+this.LV[this.lv][0]; },
+  view(s){ s.innerHTML=`<div class="main" id="fzst" style="font-size:26px;margin-bottom:10px">並んだらスタート！</div><div id="camwrap" style="width:100%;position:relative"></div><div class="sbtns"><button class="btn" data-act="start">スタート</button></div><div class="penalty" id="fzres" style="display:none"></div>`;
+    camMount($('camwrap'),true); const ov=document.createElement('canvas'); ov.id='fzov'; ov.style.cssText='position:absolute;inset:0;width:100%;height:100%;pointer-events:none'; $('camwrap').appendChild(ov);
+    this.sm=document.createElement('canvas'); this.sx=this.sm.getContext('2d',{willReadFrequently:true}); this.prev=null; this.m=new Array(this.n).fill(0); this.on=true; this.loop(); },
+  loop(){ if(!this.on) return; const v=CAM.video;
+    if(v&&v.videoWidth){ const W=64, H=Math.max(1,Math.round(64*v.videoHeight/v.videoWidth)); if(this.sm.width!==W||this.sm.height!==H){ this.sm.width=W; this.sm.height=H; this.prev=null; }
+      const x=this.sx; x.save(); x.translate(W,0); x.scale(-1,1); x.drawImage(v,0,0,W,H); x.restore();
+      const d=x.getImageData(0,0,W,H).data, g=new Float32Array(W*H); for(let i=0;i<W*H;i++) g[i]=(d[4*i]+d[4*i+1]+d[4*i+2])/3;
+      if(this.prev){ const n=this.n, cnt=new Array(n).fill(0), tot=new Array(n).fill(0);
+        for(let yy=0;yy<H;yy++) for(let xx=0;xx<W;xx++){ const k=Math.min(n-1,Math.floor(xx*n/W)), i=yy*W+xx; tot[k]++; if(Math.abs(g[i]-this.prev[i])>28) cnt[k]++; }
+        this.m=cnt.map((c,k)=>c/tot[k]); if(this.phase==='stop'){ this.m.forEach((q,k)=>this.acc[k]+=q); this.fr++; } }
+      this.prev=g; this.drawOv(); }
+    this.raf=requestAnimationFrame(()=>this.loop()); },
+  drawOv(){ const ov=$('fzov'); if(!ov) return; const r=ov.getBoundingClientRect(); if(!r.width) return; ov.width=r.width*2; ov.height=r.height*2; const x=ov.getContext('2d'), W=ov.width, H=ov.height, n=this.n, thr=this.LV[this.lv][1];
+    for(let k=0;k<n;k++){ const X=k*W/n, q=this.m[k]||0, hot=q>thr;
+      if(k) { x.strokeStyle='#fff8'; x.lineWidth=3; x.setLineDash([12,10]); x.beginPath(); x.moveTo(X,0); x.lineTo(X,H); x.stroke(); x.setLineDash([]); }
+      const bh=Math.min(1,q/(thr*2))*H*0.45; x.fillStyle=hot?'#ff4f8bcc':'#3ee6b499'; x.fillRect(X+W/n*0.3,H-bh,W/n*0.4,bh);
+      x.fillStyle='#000a'; x.fillRect(X+8,10,W/n-16,44); x.fillStyle='#fff'; x.font='bold 26px sans-serif'; x.textAlign='center'; x.fillText(this.ps[k],X+W/n/2,42); } },
+  act(s,a){
+    if(a==='open'){ camOpen('user').then(()=>this.view(s)).catch(()=>camErr(s)); return; }
+    if(a==='start' && (this.phase==='idle'||this.phase==='done')){
+      const st=$('fzst'), res=$('fzres'), b=s.querySelector('[data-act="start"]'); res.style.display='none'; b.style.visibility='hidden';
+      this.phase='move'; st.textContent='うごいてOK 🕺'; st.style.color='var(--mint)';
+      this.t1=setTimeout(()=>{ this.phase='stop'; this.acc=new Array(this.n).fill(0); this.fr=0; st.textContent='ストップ！🛑'; st.style.color='var(--pink)'; try{navigator.vibrate&&navigator.vibrate(200)}catch(e){}
+        this.t2=setTimeout(()=>{ this.phase='done'; const avg=this.acc.map(q=>q/Math.max(1,this.fr)), mx=Math.max(...avg), k=avg.indexOf(mx), thr=this.LV[this.lv][1];
+          st.style.color=''; b.style.visibility='visible'; b.textContent='もう一回'; res.style.display='block';
+          if(mx>thr){ st.textContent=`${this.ps[k]}が動いた！`; res.textContent=`${this.ps[k]}：${drink()}`; s.classList.add('shake'); setTimeout(()=>s.classList.remove('shake'),500); }
+          else { st.textContent='全員セーフ！'; res.textContent='ピタッと止まれた！もう一回やる？'; } },3000); }, 2000+Math.random()*2500); } },
+  stop(){ this.on=false; cancelAnimationFrame(this.raf); clearTimeout(this.t1); clearTimeout(this.t2); this.phase='idle'; camClose(); }},
+ {id:'zoomq',em:'🔍',cam:1,name:'ズームクイズ',c:'var(--mint)',desc:'超アップの写真は何？',
+  rule:'出題者がこっそり身の回りの物を撮影。超ズームの写真から少しずつ引いていくので、何の写真か当てよう！一発で当てられたら出題者、最後まで当たらなかったら回答者全員が罰ゲーム。',
+  init(s){ this.stop(); s.innerHTML=`<div class="small">出題者だけ見てね 🤫</div><div class="main">🔍</div><div class="sbtns"><button class="btn" data-act="open">📷 カメラを起動</button></div>`; $('gBtn').textContent=this.btn; },
+  btn:'新しい問題',
+  run(s){ this.init(s); },
+  show(s){ const z=[8,4,2,1][this.zi], S=this.cv.width, sz=S/z, sx=Math.max(0,Math.min(S-sz,this.cx*S-sz/2)), sy=Math.max(0,Math.min(S-sz,this.cy*S-sz/2)), o=document.createElement('canvas'); o.width=o.height=480; o.getContext('2d').drawImage(this.cv,sx,sy,sz,sz,0,0,480,480);
+    const last=this.zi===3;
+    s.innerHTML=`<div class="small">${last?'正解はこれ！':'これは何？ ズーム '+z+'倍'}</div><img src="${o.toDataURL('image/jpeg',0.85)}" class="pop" style="width:100%;border-radius:14px">${last?`<div class="penalty">当てられなかったら回答者全員：${drink()}</div>`:`<div class="penalty">${this.zi===0?'一発で当てられたら出題者：'+drink():'わかった人は答えてね'}</div><div class="sbtns"><button class="btn" data-act="out">🔍 ズームアウト</button></div>`}`; },
+  async act(s,a){
+    if(a==='open'){ try{ await camOpen('environment'); }catch(e){ try{ await camOpen('user'); }catch(e2){ camErr(s); return; } }
+      s.innerHTML=`<div class="small">出題者だけ見て、身の回りの物を撮ってね</div><div id="camwrap" style="width:100%"></div><div class="sbtns"><button class="btn" data-act="snap">📸 撮影</button></div>`; camMount($('camwrap'),CAM.facing==='user'); return; }
+    if(a==='snap'){ this.cv=camSnap(CAM.facing==='user',720); camClose(); this.zi=0; this.cx=0.3+Math.random()*0.4; this.cy=0.3+Math.random()*0.4; this.show(s); return; }
+    if(a==='out'){ this.zi=Math.min(3,this.zi+1); this.show(s); } },
+  stop(){ camClose(); }},
+];
+GAMES.unshift(...CAMG);
+
+// ---------- 声マネキング（マイク使用） ----------
+const MIC = { stream:null, ctx:null };
+async function micInit(){
+  if(!MIC.ctx) MIC.ctx = new (window.AudioContext||window.webkitAudioContext)();
+  if(MIC.ctx.state==='suspended') await MIC.ctx.resume();
+  if(!MIC.stream) MIC.stream = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});
+}
+function pitchOf(buf, sr){
+  let n=buf.length, rms=0; for(let i=0;i<n;i++) rms+=buf[i]*buf[i]; rms=Math.sqrt(rms/n);
+  if(rms<0.015) return [rms,-1];
+  const minLag=Math.floor(sr/900), maxLag=Math.floor(sr/70); let best=-1, bestC=0;
+  for(let lag=minLag; lag<=maxLag; lag++){ let c=0; for(let i=0;i<n-lag;i+=2) c+=buf[i]*buf[i+lag]; if(c>bestC){bestC=c;best=lag;} }
+  let e=0; for(let i=0;i<n;i+=2) e+=buf[i]*buf[i];
+  return [rms, (best>0 && bestC/e>0.3) ? sr/best : -1];
+}
+function recordClip(ms, onTick){
+  return new Promise(async (res, rej)=>{
+    try{ await micInit(); }catch(e){ rej(e); return; }
+    const src=MIC.ctx.createMediaStreamSource(MIC.stream), an=MIC.ctx.createAnalyser(); an.fftSize=2048; src.connect(an);
+    const buf=new Float32Array(an.fftSize), frames=[]; let rec=null, chunks=[];
+    try{ rec=new MediaRecorder(MIC.stream); rec.ondataavailable=e=>chunks.push(e.data); rec.start(); }catch(e){ rec=null; }
+    const st=performance.now();
+    const iv=setInterval(()=>{ an.getFloatTimeDomainData(buf); const [r,f]=pitchOf(buf,MIC.ctx.sampleRate); frames.push([r,f]); const el=performance.now()-st; onTick&&onTick(r, el);
+      if(el>=ms){ clearInterval(iv); src.disconnect();
+        const done=()=>res({frames, url: chunks.length? URL.createObjectURL(new Blob(chunks,{type:chunks[0].type})) : null});
+        if(rec&&rec.state!=='inactive'){ rec.onstop=done; rec.stop(); } else done(); } },50);
+  });
+}
+function features(frames){
+  let a=0,b=frames.length-1; const th=0.02; while(a<b&&frames[a][0]<th)a++; while(b>a&&frames[b][0]<th)b--;
+  const f=frames.slice(a,b+1); if(f.length<4) return null;
+  const mx=Math.max(...f.map(x=>x[0]))||1; const voiced=f.filter(x=>x[1]>0).map(x=>12*Math.log2(x[1]/100)).sort((x,y)=>x-y);
+  const med=voiced.length? voiced[voiced.length>>1] : 0; let last=0;
+  return { len:f.length, med, seq:f.map(x=>{ const p = x[1]>0 ? 12*Math.log2(x[1]/100)-med : null; if(p!==null) last=p; return [x[0]/mx, (p===null?last:p)/12]; }) };
+}
+function similarity(A,B){
+  if(!A||!B) return 0;
+  const a=A.seq,b=B.seq,n=a.length,m=b.length,INF=1e9; let prev=new Array(m+1).fill(INF); prev[0]=0;
+  for(let i=1;i<=n;i++){ const cur=new Array(m+1).fill(INF); for(let j=1;j<=m;j++){ const d=Math.abs(a[i-1][0]-b[j-1][0])+Math.abs(a[i-1][1]-b[j-1][1]); cur[j]=d+Math.min(prev[j],cur[j-1],prev[j-1]); } prev=cur; }
+  const dist=prev[m]/(n+m);
+  const lenPen=Math.abs(Math.log(n/m))*0.35, pitchPen=Math.min(1,Math.abs(A.med-B.med)/12)*0.25;
+  return Math.max(3, Math.min(99, Math.round(100*Math.exp(-2.2*(dist+lenPen+pitchPen)))));
+}
+const KOE=['「かんぱーい！」','「ありがとうございました」','「えっ、マジで！？」','「ただいまー」','「いらっしゃいませー」','「おはようございます」','「ちょっと待って！」','「やったー！」','「もう帰りたい…」','「次の駅は、渋谷です」','「いただきます！」','「おつかれさまでーす」'];
+const KOE_STYLE=['校長先生っぽく','ギャルっぽく','執事っぽく','赤ちゃんっぽく','おばあちゃんっぽく','ロボットっぽく','時代劇の殿様っぽく','野球の実況っぽく','ささやき声で','泣きながら','めちゃくちゃ眠そうに','ラジオDJっぽく','オペラ歌手っぽく','ヒーローの決めゼリフっぽく'];
+GAMES.unshift({id:'koemane',em:'🎙️',mic:1,name:'声マネキング',c:'var(--pink)',desc:'お手本にどれだけ似せられる？',
+  rule:'お手本の人がお題のセリフを録音。ほかの人は順番にそれをマネして録音すると、アプリが抑揚と声の大きさの変化を比べて似てる度を点数にします。一番似てた人が声マネキング👑、最下位が罰ゲーム！（マイクを許可してね）',
+  init(s){ this.busy=false; this.koe=pick(KOE); this.sty=pick(KOE_STYLE); this.ref=null; this.res=[]; this.ps=names(); this.i=1; this.draw(s); $('gBtn').textContent=this.btn; },
+  btn:'お題を変える',
+  run(s){ if(this.busy) return; this.init(s); },
+  draw(s,extra){
+    const ps=this.ps;
+    let h=`<div class="small">お題</div><div class="main pop" style="font-size:24px">${this.koe}<br><span style="font-size:18px;color:var(--yellow)">${this.sty}</span></div>`;
+    if(!this.ref){ h+=`<div class="small" style="margin-top:14px">お手本：${ps[0]}さん</div><div class="sbtns"><button class="btn" data-act="rec0">🎙️ お手本を録音（4秒）</button></div>`; }
+    else {
+      h+=`<div class="sbtns"><button class="btn sub" data-act="play0">▶ お手本を聞く</button></div>`;
+      if(this.res.length) h+=`<div style="width:100%;margin-top:12px">${this.res.map((r,k)=>`<div style="display:flex;align-items:center;gap:8px;margin:6px 0;font-size:15px"><b style="flex:1;text-align:left">${r.name}</b><span style="color:var(--yellow);font-weight:800">${r.score}点</span>${r.url?`<button class="btn sub" data-act="play${k+1}" style="padding:6px 10px;font-size:13px">▶</button>`:''}</div>`).join('')}</div>`;
+      if(this.i<ps.length) h+=`<div class="sbtns"><button class="btn" data-act="rec">🎙️ ${ps[this.i]}さんが挑戦</button></div>`;
+      else { const sorted=[...this.res].sort((a,b)=>b.score-a.score); const low=sorted[sorted.length-1];
+        h+= sorted[0].score===low.score ? `<div class="penalty pop">全員同点！みんなで${nonAlc?'拍手 👏':'乾杯 🥂'}</div>` : `<div class="penalty pop">👑 声マネキング：${sorted[0].name}さん（${sorted[0].score}点）</div><div class="penalty pop">最下位 ${low.name}さん：${drink()}</div>`; }
+    }
+    s.innerHTML=h+(extra||'');
+  },
+  async act(s,a){
+    if(this.busy) return;
+    if(a.startsWith('play')){ const k=+a.slice(4); const url = k===0 ? this.ref.url : this.res[k-1].url; if(url){ try{ await new Audio(url).play(); }catch(e){} } return; }
+    this.busy=true; const who = a==='rec0' ? this.ps[0] : this.ps[this.i];
+    let cd=3; s.innerHTML=`<div class="small">${who}さん</div><div class="main pop" style="font-size:60px">${cd}</div><div class="small">${this.koe} ${this.sty}</div>`;
+    await new Promise(r=>{ const t=setInterval(()=>{ cd--; if(cd<=0){clearInterval(t);r();} else s.querySelector('.main').textContent=cd; },700); });
+    s.innerHTML=`<div class="small">🔴 録音中… ${who}さん</div><div class="main" style="font-size:24px">${this.koe}<br><span style="font-size:18px;color:var(--yellow)">${this.sty}</span></div><div style="width:100%;height:14px;background:var(--card2);border-radius:99px;margin-top:16px;overflow:hidden"><div id="vol" style="height:100%;width:0;background:var(--c);transition:width .05s"></div></div><div class="timerbar" id="tb" style="width:100%"></div>`;
+    let clip;
+    try{ clip = await recordClip(4000,(r,el)=>{ const v=$('vol'),tb=$('tb'); if(v) v.style.width=Math.min(100,r*400)+'%'; if(tb) tb.style.width=Math.max(0,100-el/40)+'%'; }); }
+    catch(e){ this.busy=false; s.innerHTML=`<div class="small">マイクが使えませんでした</div><div class="main" style="font-size:20px">ブラウザの設定でこのサイトのマイクを許可して、もう一度試してね</div>`; $('gBtn').textContent='もう一回'; return; }
+    this.busy=false; const ft=features(clip.frames);
+    if(!ft){ this.draw(s,`<div class="penalty pop">声が小さくて聞き取れなかった！もう一回録音してね</div>`); return; }
+    if(a==='rec0'){ this.ref={ft,url:clip.url}; this.draw(s); return; }
+    this.res.push({name:who, score:similarity(this.ref.ft, ft), url:clip.url}); this.i++; this.draw(s);
+  }});
 const c13=()=>1+Math.floor(Math.random()*13);
 const OEKAKI=['キリン','東京タワー','たこ焼き','雪だるま','ドラムセット','観覧車','ペンギン','自転車','カタツムリ','おにぎり','新幹線','サンタクロース','富士山','ハンバーガー','ゾウ','傘','ロケット','カメラ','花火','かき氷'];
 const QUIZ=[['パンダのしっぽの色は？','白'],['日本で一番長い川は？','信濃川'],['日本で一番大きい湖は？','琵琶湖'],['タコの心臓はいくつ？','3つ'],['面積が世界一大きい国は？','ロシア'],['お寿司の「ガリ」の正体は？','生姜'],['1ダースは何個？','12個'],['七福神で唯一、日本生まれの神様は？','恵比寿'],['1回目の東京オリンピックは何年？','1964年'],['富士山がまたがっている2つの県は？','静岡県と山梨県'],['シマウマの毛の下の肌の色は？','黒'],['イルカは何類？','哺乳類'],['ハワイ語で「ありがとう」は？','マハロ'],['トランプのジョーカーを除いた枚数は？','52枚'],['ピアノの鍵盤の数（標準）は？','88鍵'],['将棋で1人が最初に持つ駒の数は？','20枚'],['「鮭」の読み方は？','さけ（しゃけ）'],['太陽系の惑星はいくつ？','8つ']];
@@ -589,7 +761,7 @@ let cur=null;
 function renderGrid(f){
   const list = GAMES.filter(g=> f==='all' || (f==='minor'&&g.m) || (f==='std'&&!g.m&&!g.k) || (g.k&&g.k===f));
   const BADGE={love:'合コン',small:'2〜3人'};
-  $('grid').innerHTML = list.map(g=>`<button class="game" style="--c:${g.c}" data-id="${g.id}">${g.m?'<span class="badge">マイナー</span>':g.k?`<span class="badge">${BADGE[g.k]}</span>`:''}<div class="em">${g.em}</div><b>${g.name}</b><span>${g.desc}</span></button>`).join('');
+  $('grid').innerHTML = list.map(g=>`<button class="game" style="--c:${g.c}" data-id="${g.id}">${g.cam?'<span class="badge">📷カメラ</span>':g.mic?'<span class="badge">🎙️マイク</span>':g.m?'<span class="badge">マイナー</span>':g.k?`<span class="badge">${BADGE[g.k]}</span>`:''}<div class="em">${g.em}</div><b>${g.name}</b><span>${g.desc}</span></button>`).join('');
   $('grid').querySelectorAll('.game').forEach(el=>el.onclick=()=>openGame(el.dataset.id));
 }
 $('filters').querySelectorAll('.chip').forEach(c=>c.onclick=()=>{ $('filters').querySelectorAll('.chip').forEach(x=>x.classList.toggle('on',x===c)); renderGrid(c.dataset.f); });
@@ -604,8 +776,8 @@ function openGame(id){
   $('screen').style.setProperty('--c',cur.c);
   $('gEm').textContent=cur.em; $('gTitle').textContent=cur.name; $('gRule').textContent=cur.rule;
   $('gBtn').textContent=cur.btn;
-  const s=$('stage'); s.className='stage'; cur.init(s);
   $('gBtn2').style.display = cur.btn2 ? 'block' : 'none'; $('gBtn2').textContent = cur.btn2||'';
+  const s=$('stage'); s.className='stage'; cur.init(s);
   $('home').style.display='none'; $('screen').style.display='block'; window.scrollTo(0,0);
 }
 $('gBtn').onclick=()=>cur.run($('stage'));
