@@ -94,6 +94,12 @@ footer b{color:var(--ink)}
     <p class="hint">名前を入れると「指名ルーレット」や「誰が一番？」で使えます。入れなくても遊べます。</p>
   </div>
 
+  <h2>💴 お会計</h2>
+  <button class="game" id="kaikeiBtn" style="--c:var(--yellow);width:100%;display:flex;align-items:center;gap:14px">
+    <div class="em">💴</div>
+    <div><b style="margin-top:0">お会計モード</b><span>ルーレット割り勘・くじ引き・金額ニアピン・先輩後輩傾斜。結果はLINEにコピーできます</span></div>
+  </button>
+
   <h2>🎲 ゲームを選ぶ</h2>
   <div class="filters" id="filters">
     <button class="chip on" data-f="all">すべて</button>
@@ -536,6 +542,89 @@ const EXTRA = [
 EXTRA.find(g=>g.id==='janken').act = (function(orig){ return function(s,a){ if(a==='next'){ this.ask(s,0); return; } orig.call(this,s,a); }; })(EXTRA.find(g=>g.id==='janken').act);
 GAMES.push(...EXTRA);
 
+// ---------- お会計モード ----------
+const yen=n=>n.toLocaleString('ja-JP')+'円';
+function splitPay(total, w, unit){
+  const sw=w.reduce((a,b)=>a+b,0), raw=w.map(x=>total*x/sw);
+  const amt=raw.map(r=>Math.round(r/unit)*unit); amt[0]=0; amt[0]=total-amt.reduce((a,b)=>a+b,0);
+  if(amt[0]>=0) return {amt, odd:amt[0]-Math.round(raw[0]/unit)*unit};
+  const base=raw.map(r=>Math.floor(r/unit)*unit); let rem=total-base.reduce((a,b)=>a+b,0);
+  for(const [,i] of raw.map((r,i)=>[r-base[i],i]).sort((a,b)=>b[0]-a[0])){ if(rem<unit) break; base[i]+=unit; rem-=unit; }
+  base[0]+=rem; return {amt:base, odd:rem};
+}
+GAMES.push({id:'kaikei',hide:1,em:'💴',name:'お会計モード',c:'var(--yellow)',desc:'',
+  rule:'合計金額を入れて、割り方を選ぶだけ。ふつうの割り勘から、運で金額が変わるモードまで。結果はLINEにそのまま貼れます。端数は幹事（1人目）が調整します。',
+  MODES:[
+    ['normal','🧮 ふつうに割り勘','全員同じ金額'],
+    ['roulette','🎰 ルーレット割り勘','1人ずつ金額がランダム（0.5〜1.5倍）'],
+    ['kuji','🎟️ くじ引き割り勘','当たり1人は半額、ハズレ1人がその分を負担'],
+    ['nearpin','🎯 金額ニアピン','合計金額を予想。一番近い人が安く、一番遠い人が多め'],
+    ['senpai','🎓 先輩・後輩傾斜','先輩多め・後輩少なめ（サークル向け）'],
+  ],
+  ROLES:[['先輩',1.3],['同期',1],['後輩',0.7]],
+  init(s){ this.busy=false; this.roles=null; this.form(s); $('gBtn').textContent=this.btn; },
+  btn:'最初からやり直す',
+  run(s){ if(!this.busy) this.init(s); },
+  nm(){ return players.length>=2 ? players.map(esc) : Array.from({length:this.n||4},(_,i)=>'メンバー'+(i+1)); },
+  form(s){
+    const many=players.length>=2;
+    s.style.justifyContent='flex-start';
+    s.innerHTML=`<div class="small">合計金額</div>
+      <input class="numin" id="kTotal" type="number" inputmode="numeric" placeholder="例：24000" value="${this.total||''}" style="margin-top:0">
+      ${many?`<div class="small" style="margin-top:12px">メンバー：${players.map(esc).join('・')}（${players.length}人）</div>`:`<div class="small" style="margin-top:12px">人数（メンバー登録すると名前で出ます）</div><input class="numin" id="kN" type="number" inputmode="numeric" value="${this.n||4}" min="2" max="30" style="margin-top:6px">`}
+      <div class="small" style="margin-top:12px">何円単位にする？</div>
+      <div class="sbtns" style="margin-top:6px">${[10,100,500].map(u=>`<button class="btn ${ (this.unit||100)===u?'':'sub'}" data-act="unit${u}" style="font-size:16px;padding:10px 0">${u}円</button>`).join('')}</div>
+      <div class="small" style="margin-top:16px">割り方を選ぶ</div>
+      <div style="display:grid;gap:8px;width:100%;margin-top:6px">${this.MODES.map(m=>`<button class="btn sub" data-act="m_${m[0]}" style="white-space:normal;text-align:left;padding:12px 14px;font-size:16px">${m[1]}<br><span style="font-size:12px;color:var(--mute);font-weight:500">${m[2]}</span></button>`).join('')}</div>
+      <div class="small" id="kErr" style="color:var(--pink);margin-top:10px"></div>`;
+  },
+  read(s){ const t=$('kTotal'), n=$('kN'); this.total=Math.round(+(t&&t.value)||0); if(n) this.n=Math.max(2,Math.min(30,Math.round(+n.value||0))); },
+  show(s,title,amt,odd,extra){
+    const ns=this.nm(); this.last={title,ns,amt};
+    s.style.justifyContent='flex-start';
+    s.innerHTML=`<div class="small">${title}</div><div class="main pop" style="font-size:30px">合計 ${yen(this.total)}</div>
+      <div style="width:100%;margin-top:12px">${ns.map((n,i)=>`<div class="pop" style="animation-delay:${i*0.12}s;animation-fill-mode:both;display:flex;justify-content:space-between;align-items:center;background:var(--card2);border-radius:12px;padding:10px 14px;margin:6px 0;font-size:17px"><b>${n}${extra&&extra[i]?` <span style="font-size:12px;color:var(--yellow)">${extra[i]}</span>`:''}</b><b style="color:var(--yellow)">${yen(amt[i])}</b></div>`).join('')}</div>
+      ${odd?`<div class="small">端数は幹事の${ns[0]}さんが調整（${odd>0?'+':'−'}${yen(Math.abs(odd))}）</div>`:''}
+      <div class="sbtns"><button class="btn sub" data-act="copy">📋 LINE用にコピー</button><button class="btn sub" data-act="back">割り方を変える</button></div><div class="small" id="kCopied"></div>`;
+  },
+  async act(s,a){
+    if(this.busy) return;
+    if(a.startsWith('unit')){ this.read(s); this.unit=+a.slice(4); this.form(s); return; }
+    if(a==='back'){ this.roles=null; this.form(s); return; }
+    if(a==='copy'){ const L=this.last; const txt=`【お会計】${L.title}\n合計 ${yen(this.total)}\n`+L.ns.map((n,i)=>`${n}：${yen(L.amt[i])}`).join('\n')+`\n#アゲアゲノミゲー`;
+      try{ await navigator.clipboard.writeText(txt); $('kCopied').textContent='コピーしました！LINEに貼ってね'; }catch(e){ $('kCopied').textContent='コピーできませんでした（長押しで選択してね）'; } return; }
+    if(a.startsWith('m_')){
+      this.read(s); const mode=a.slice(2), unit=this.unit||100;
+      if(mode!=='nearpin' && !(this.total>0)){ $('kErr').textContent='合計金額を入れてね'; return; }
+      const ns=this.nm(), n=ns.length;
+      if(mode==='normal'){ const r=splitPay(this.total,ns.map(()=>1),unit); this.show(s,'ふつうに割り勘',r.amt,r.odd); return; }
+      if(mode==='roulette'){ this.busy=true; s.innerHTML=`<div class="small">ルーレット割り勘</div><div class="main pop" style="font-size:44px">🎰</div><div class="main" id="kSpin" style="font-size:22px">抽選中…</div>`;
+        for(let k=0;k<14;k++){ const el=$('kSpin'); if(el) el.textContent=`${pick(ns)}：${yen(Math.round(this.total/n*(0.5+Math.random())/unit)*unit)}`; await sleep(60+k*12); }
+        this.busy=false; const w=ns.map(()=>0.5+Math.random()), r=splitPay(this.total,w,unit), mx=Math.max(...r.amt), mn=Math.min(...r.amt);
+        this.show(s,'ルーレット割り勘',r.amt,r.odd,r.amt.map(x=>x===mn?'🍀ラッキー':x===mx?'💸アンラッキー':'')); return; }
+      if(mode==='kuji'){ const win=Math.floor(Math.random()*n); let lose; do{ lose=Math.floor(Math.random()*n); }while(lose===win);
+        const w=ns.map((_,i)=>i===win?0.5:i===lose?1.5:1), r=splitPay(this.total,w,unit);
+        this.busy=true; s.innerHTML=`<div class="small">くじ引き割り勘</div><div class="main pop" style="font-size:44px">🎟️</div><div class="main" style="font-size:22px">くじを引いてます…</div>`; await sleep(1200); this.busy=false;
+        this.show(s,'くじ引き割り勘',r.amt,r.odd,ns.map((_,i)=>i===win?'🎉当たり（半額）':i===lose?'💀ハズレ':'')); return; }
+      if(mode==='senpai'){ this.roles=this.roles||ns.map(()=>1); this.roleView(s); return; }
+      if(mode==='nearpin'){ s.style.justifyContent='flex-start';
+        s.innerHTML=`<div class="small">幹事だけ見て入力 🤫（伏せ字になります）</div><input class="numin" id="kSecret" type="text" inputmode="numeric" autocomplete="off" style="-webkit-text-security:disc;text-security:disc" placeholder="本当の合計金額" value="">
+          <div class="small" style="margin-top:14px">みんなの予想金額</div>${ns.map((nm,i)=>`<div style="display:flex;gap:8px;align-items:center;width:100%;margin-top:6px"><b style="flex:0 0 38%;text-align:left;font-size:15px">${nm}</b><input class="numin" id="kG${i}" type="number" inputmode="numeric" style="margin:0;font-size:18px;padding:10px" placeholder="予想"></div>`).join('')}
+          <div class="sbtns"><button class="btn" data-act="nearcalc">結果発表！</button></div><div class="small" id="kErr" style="color:var(--pink);margin-top:10px"></div>`; return; }
+    }
+    if(a.startsWith('role')){ const k=+a.slice(4); this.roles[k]=(this.roles[k]+1)%3; this.roleView(s); return; }
+    if(a==='senpaicalc'){ const r=splitPay(this.total,this.roles.map(x=>this.ROLES[x][1]),this.unit||100); this.show(s,'先輩・後輩傾斜',r.amt,r.odd,this.roles.map(x=>this.ROLES[x][0])); return; }
+    if(a==='nearcalc'){ const ns=this.nm(), secret=Math.round(+String($('kSecret').value).replace(/[^0-9]/g,'')||0);
+      const g=ns.map((_,i)=>+($('kG'+i).value)); if(!(secret>0)){ $('kErr').textContent='幹事さん、本当の合計金額を入れてね'; return; } if(g.some(x=>!(x>0))){ $('kErr').textContent='全員の予想を入れてね'; return; }
+      this.total=secret; const d=g.map(x=>Math.abs(x-secret)), mn=Math.min(...d), mx=Math.max(...d);
+      const w=d.map(x=> mn===mx?1 : x===mn?0.7 : x===mx?1.3 : 1), r=splitPay(secret,w,this.unit||100);
+      this.show(s,'金額ニアピン',r.amt,r.odd,g.map((x,i)=>`予想${yen(x)}${d[i]===mn&&mn!==mx?' 🎯ニアピン賞':d[i]===mx&&mn!==mx?' 😵大ハズレ':''}`)); return; }
+  },
+  roleView(s){ const ns=this.nm(); s.style.justifyContent='flex-start';
+    s.innerHTML=`<div class="small">タップで切り替え（先輩×1.3／同期×1／後輩×0.7）</div><div style="width:100%;margin-top:8px">${ns.map((n,i)=>`<div style="display:flex;justify-content:space-between;align-items:center;margin:6px 0"><b style="font-size:16px">${n}</b><button class="btn ${this.roles[i]===1?'sub':''}" data-act="role${i}" style="padding:8px 16px;font-size:15px;${this.roles[i]===2?'background:var(--blue)':''}">${this.ROLES[this.roles[i]][0]}</button></div>`).join('')}</div><div class="sbtns"><button class="btn" data-act="senpaicalc">計算する</button></div>`; },
+  stop(){ const s=$('stage'); if(s) s.style.justifyContent=''; }
+});
+
 // ---------- カメラゲーム ----------
 const CAM={stream:null,facing:null,video:null};
 async function camOpen(facing){
@@ -759,13 +848,14 @@ $('nonAlc').onclick=()=>{ nonAlc=!nonAlc; save(); renderNonAlc(); };
 
 let cur=null;
 function renderGrid(f){
-  const list = GAMES.filter(g=> f==='all' || (f==='minor'&&g.m) || (f==='std'&&!g.m&&!g.k) || (g.k&&g.k===f));
+  const list = GAMES.filter(g=> !g.hide).filter(g=> f==='all' || (f==='minor'&&g.m) || (f==='std'&&!g.m&&!g.k) || (g.k&&g.k===f));
   const BADGE={love:'合コン',small:'2〜3人'};
   $('grid').innerHTML = list.map(g=>`<button class="game" style="--c:${g.c}" data-id="${g.id}">${g.cam?'<span class="badge">📷カメラ</span>':g.mic?'<span class="badge">🎙️マイク</span>':g.m?'<span class="badge">マイナー</span>':g.k?`<span class="badge">${BADGE[g.k]}</span>`:''}<div class="em">${g.em}</div><b>${g.name}</b><span>${g.desc}</span></button>`).join('');
   $('grid').querySelectorAll('.game').forEach(el=>el.onclick=()=>openGame(el.dataset.id));
 }
 $('filters').querySelectorAll('.chip').forEach(c=>c.onclick=()=>{ $('filters').querySelectorAll('.chip').forEach(x=>x.classList.toggle('on',x===c)); renderGrid(c.dataset.f); });
 renderGrid('all');
+$('kaikeiBtn').onclick=()=>openGame('kaikei');
 $('stage').addEventListener('click',e=>{ const b=e.target.closest('[data-act]'); if(b&&cur&&cur.act) cur.act($('stage'),b.dataset.act,b); });
 $('stage').addEventListener('keydown',e=>{ if(e.key==='Enter'&&e.target.id==='nb'&&cur&&cur.act) cur.act($('stage')); });
 
