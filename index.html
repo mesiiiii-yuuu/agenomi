@@ -4,6 +4,25 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>アゲアゲノミゲー！ 大学生の飲みゲー集</title>
+<meta name="description" content="飲み会や宅飲みでスマホ1台あればすぐ遊べる、大学生向けの飲みゲー集。指名ルーレット、山手線ゲーム、ワードウルフ、王様ゲームなど52種類と、ルーレット割り勘などのお会計ツール。無料・登録なし。">
+<link rel="canonical" href="https://agenomi.app/">
+<meta name="theme-color" content="#14101f">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="48x48" href="favicon-48.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="アゲノミ">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="アゲアゲノミゲー！">
+<meta property="og:title" content="アゲアゲノミゲー！ 大学生の飲みゲー集">
+<meta property="og:description" content="飲み会でスマホ1台あれば遊べる飲みゲー52種類＋割り勘ルーレット。無料・登録なし。飲んでも飲まなくても、全員アゲアゲ。">
+<meta property="og:url" content="https://agenomi.app/">
+<meta property="og:image" content="https://agenomi.app/ogp.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="ja_JP">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://agenomi.app/ogp.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=M+PLUS+Rounded+1c:wght@500;700;800&display=swap" rel="stylesheet">
 <style>
@@ -72,6 +91,11 @@ input[type=text]{flex:1;background:var(--card2);border:none;border-radius:12px;p
 .links{margin-top:24px;text-align:center;font-size:13px;color:var(--mute)}
 .links a{color:var(--mint);margin:0 10px}
 .links p{margin-top:8px;font-size:12px}
+.omakase{width:100%;margin-bottom:14px;border:none;border-radius:20px;padding:18px 14px;font-family:inherit;font-size:15px;font-weight:700;color:#14101f;cursor:pointer;
+  background:linear-gradient(90deg,var(--yellow),var(--pink));box-shadow:0 6px 0 #a3305c;transition:transform .1s}
+.omakase b{display:block;font-size:22px;font-weight:800}
+.omakase:active{transform:translateY(4px);box-shadow:0 2px 0 #a3305c}
+.omakase.spin{animation:shake .5s infinite}
 footer{margin-top:36px;background:var(--card);border-radius:18px;padding:16px;font-size:13px;color:var(--mute);line-height:1.8}
 footer b{color:var(--ink)}
 </style>
@@ -104,7 +128,13 @@ footer b{color:var(--ink)}
     <div><b style="margin-top:0">お会計モード</b><span>ルーレット割り勘・くじ引き・金額ニアピン・先輩後輩傾斜。結果はLINEにコピーできます</span></div>
   </button>
 
+  <button class="game" id="customBtn" style="--c:var(--mint);width:100%;display:flex;align-items:center;gap:14px;margin-top:12px">
+    <div class="em">✏️</div>
+    <div><b style="margin-top:0">オリジナルお題をつくる</b><span>サークルの身内ネタや自分たちだけの罰ゲームを追加できます</span></div>
+  </button>
+
   <h2>🎲 ゲームを選ぶ</h2>
+  <button class="omakase" id="omakase">🎲 次なにする？<b>おまかせで選ぶ</b></button>
   <div class="filters" id="filters">
     <button class="chip on" data-f="all">すべて</button>
     <button class="chip" data-f="std">⭐ 定番</button>
@@ -126,7 +156,7 @@ footer b{color:var(--ink)}
     <p>使い方：参加メンバーの名前を入れて、遊びたいゲームを選ぶだけ。お酒を飲まない人がいるときは「ノンアルモード」をONにすると、罰ゲームが飲まない内容に変わります。</p>
   </section>
   <nav class="links">
-    <a href="about.html">運営者情報</a><a href="privacy.html">プライバシーポリシー</a>
+    <a href="games.html">ゲーム一覧・ルール</a><a href="about.html">運営者情報</a><a href="privacy.html">プライバシーポリシー</a>
     <p>© アゲアゲノミゲー！</p>
   </nav>
 </div>
@@ -147,9 +177,49 @@ let players = [];
 let nonAlc = false;
 try{ players = JSON.parse(localStorage.getItem('nomige_players')||'[]'); nonAlc = localStorage.getItem('nomige_nonalc')==='1'; }catch(e){}
 const save = ()=>{ try{ localStorage.setItem('nomige_players',JSON.stringify(players)); localStorage.setItem('nomige_nonalc',nonAlc?'1':'0'); }catch(e){} };
-const pick = a => a[Math.floor(Math.random()*a.length)];
+const BAGS = new WeakMap();
+// 山札方式：全部出るまで同じものは出ない。つなぎ目でも直前と同じものは出ない
+const pick = a => {
+  if(!a || a.length<=1) return a && a[0];
+  let b = BAGS.get(a);
+  if(!b || b.n!==a.length || !b.q.length){
+    const last = b ? b.last : -1, q = [...a.keys()];
+    for(let i=q.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [q[i],q[j]]=[q[j],q[i]]; }
+    if(q[q.length-1]===last){ [q[0],q[q.length-1]]=[q[q.length-1],q[0]]; }
+    b = {q, n:a.length, last}; BAGS.set(a,b);
+  }
+  const i = b.q.pop(); b.last = i; return a[i];
+};
 const $ = id => document.getElementById(id);
 const drink = (n) => nonAlc ? pick(PEN_SOFT) : pick(n==='big' ? PEN_BIG : PEN_SMALL);
+const unesc = s => { const t=document.createElement('textarea'); t.innerHTML=s; return t.value; };
+const SITE_URL = 'https://agenomi.app';
+// 結果をストーリー用の縦長画像（1080×1920）にする
+async function shareCard({label, big, sub, lines}){
+  try{ await document.fonts.ready; }catch(e){}
+  const W=1080,H=1920,c=document.createElement('canvas'); c.width=W; c.height=H; const x=c.getContext('2d');
+  const F='"M PLUS Rounded 1c","Hiragino Maru Gothic ProN","Hiragino Sans","Noto Sans CJK JP",sans-serif';
+  let g=x.createRadialGradient(200,150,0,200,150,1100); g.addColorStop(0,'#5a2470'); g.addColorStop(1,'#14101f'); x.fillStyle=g; x.fillRect(0,0,W,H);
+  g=x.createRadialGradient(1000,1500,0,1000,1500,900); g.addColorStop(0,'rgba(29,63,107,.9)'); g.addColorStop(1,'rgba(20,16,31,0)'); x.fillStyle=g; x.fillRect(0,0,W,H);
+  x.textAlign='center'; x.textBaseline='middle';
+  const grad=x.createLinearGradient(240,0,840,0); grad.addColorStop(0,'#ffd23f'); grad.addColorStop(1,'#ff4f8b');
+  x.save(); x.translate(W/2,260); x.rotate(-0.05); x.fillStyle=grad; x.font='900 96px '+F; x.fillText('アゲアゲ',0,-60); x.fillText('ノミゲー！',0,60); x.restore();
+  const fit=(t,size,maxW,weight)=>{ let s=size; do{ x.font=(weight||800)+' '+s+'px '+F; s-=4; }while(x.measureText(t).width>maxW && s>24); };
+  x.fillStyle='#211a33'; x.beginPath(); x.roundRect(90,470,W-180,lines&&lines.length?1150:820,48); x.fill();
+  x.strokeStyle='#ff4f8b'; x.lineWidth=8; x.stroke();
+  x.fillStyle='#b9aed3'; fit(label,50,W-260,700); x.fillText(label,W/2,570);
+  x.fillStyle='#fff8ec'; fit(big,150,W-260,900); x.fillText(big,W/2,760);
+  if(sub){ x.fillStyle='#ffd23f'; fit(sub,62,W-300,800); x.fillText(sub,W/2,930); }
+  if(lines&&lines.length){ const top=sub?1030:900, step=Math.min(84,(1560-top)/lines.length);
+    lines.slice(0,10).forEach((l,i)=>{ const y=top+i*step; x.textAlign='left'; x.fillStyle='#fff8ec'; fit(l[0],48,520,700); x.fillText(l[0],170,y);
+      x.textAlign='right'; x.fillStyle='#ffd23f'; fit(l[1],50,360,800); x.fillText(l[1],W-170,y); }); x.textAlign='center'; }
+  x.fillStyle='#3ee6b4'; x.font='800 54px '+F; x.fillText('agenomi.app',W/2,1730);
+  x.fillStyle='#b9aed3'; x.font='700 36px '+F; x.fillText('飲み会のゲーム、ぜんぶスマホ1台で',W/2,1810);
+  const blob=await new Promise(r=>c.toBlob(r,'image/png'));
+  const file=new File([blob],'agenomi.png',{type:'image/png'}), text='#アゲアゲノミゲー '+SITE_URL;
+  try{ if(navigator.canShare && navigator.canShare({files:[file]})){ await navigator.share({files:[file],text}); return 'shared'; } }catch(e){ if(e&&e.name==='AbortError') return 'cancel'; }
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='agenomi.png'; document.body.appendChild(a); a.click(); a.remove(); return 'saved';
+}
 
 // ---------- data ----------
 const PEN_SMALL = ['ひと口飲む 🍺','ひと口飲む 🍺','ふた口飲む 🍻','左隣の人と乾杯してひと口','好きな人を1人指名して一緒にひと口'];
@@ -180,9 +250,10 @@ const GAMES = [
   run(s){
     const list = players.length? players.map(esc) : ['1番の人','2番の人','3番の人','4番の人'];
     let i=0, n=14+Math.floor(Math.random()*8); const tok=this.tok=(this.tok||0)+1;
-    const tick=()=>{ if(tok!==this.tok) return; s.innerHTML=`<div class="small">ドゥルルルル…</div><div class="main">${pick(list)}</div>`; if(++i<n) setTimeout(tick,60+i*12); else { const w=pick(list); s.innerHTML=`<div class="small">選ばれたのは…</div><div class="main pop">${w}</div><div class="penalty pop">${drink()}</div>`; s.classList.add('shake'); setTimeout(()=>s.classList.remove('shake'),500);} };
+    const tick=()=>{ if(tok!==this.tok) return; s.innerHTML=`<div class="small">ドゥルルルル…</div><div class="main">${pick(list)}</div>`; if(++i<n) setTimeout(tick,60+i*12); else { const w=pick(list), pen=drink(); this.last={w:unesc(w),pen}; s.innerHTML=`<div class="small">選ばれたのは…</div><div class="main pop">${w}</div><div class="penalty pop">${pen}</div><div class="sbtns"><button class="btn sub" data-act="share" style="font-size:15px;padding:10px 0">📸 結果をシェア</button></div>`; s.classList.add('shake'); setTimeout(()=>s.classList.remove('shake'),500);} };
     tick();
   },
+  act(s,a){ if(a==='share'&&this.last) shareCard({label:'指名ルーレットで選ばれたのは…',big:this.last.w,sub:this.last.pen.replace(/[\u{1F300}-\u{1FAFF}\u2600-\u27BF]/gu,'').trim()}); },
   stop(){ this.tok=(this.tok||0)+1; }},
  {id:'yamanote',em:'🚃',name:'山手線ゲーム',c:'var(--mint)',desc:'お題に沿って順番に答える',
   rule:'お題が出たら、手拍子に合わせて順番に答えていく。詰まった人・かぶった人の負け！',
@@ -448,6 +519,43 @@ const SMALL = [
   stop(){ this.tok=(this.tok||0)+1; }},
 ];
 GAMES.push(...LOVE, ...SMALL);
+
+// ---------- オリジナルお題 ----------
+const CUSTOM_CATS = [
+  ['yamanote','🚃 山手線ゲームのお題', '例：サークルのメンバーの名前', ()=>YAMANOTE],
+  ['never','🙋 したことある人のお題', '例：部室で寝泊まりしたことある', ()=>NEVER],
+  ['most','👉 誰が一番？のお題', '例：一番先に部長になりそうな人', ()=>MOST],
+  ['king','👑 王様ゲームの命令', '「〇番」と書くと番号に置き換わります。例：〇番が〇番の物まね', ()=>KING],
+  ['pen','😈 罰ゲーム', '例：次のゲームまで標準語禁止', ()=>null],
+];
+let CUSTOM = {}; let onlyCustom = false;
+try{ CUSTOM = JSON.parse(localStorage.getItem('nomige_custom')||'{}')||{}; onlyCustom = localStorage.getItem('nomige_onlycustom')==='1'; }catch(e){}
+const BASE = { yamanote:[...YAMANOTE], never:[...NEVER], most:[...MOST], king:[...KING], pensmall:[...PEN_SMALL], pensoft:[...PEN_SOFT] };
+function fill(arr, base, mine){ arr.length=0; if(onlyCustom && mine.length) arr.push(...mine); else arr.push(...base, ...mine); }
+function applyCustom(){
+  const c=k=>(CUSTOM[k]||[]).filter(Boolean);
+  fill(YAMANOTE, BASE.yamanote, c('yamanote')); fill(NEVER, BASE.never, c('never'));
+  fill(MOST, BASE.most, c('most')); fill(KING, BASE.king, c('king'));
+  fill(PEN_SMALL, BASE.pensmall, c('pen')); fill(PEN_SOFT, BASE.pensoft, c('pen'));
+}
+applyCustom();
+GAMES.push({id:'custom',hide:1,em:'✏️',name:'オリジナルお題',c:'var(--mint)',desc:'',
+  rule:'1行に1つずつ書いて「保存する」を押すと、そのゲームのお題に混ざって出てきます。保存先はこのスマホのブラウザの中だけなので、ほかの人には見えません。',
+  init(s){ s.style.justifyContent='flex-start';
+    s.innerHTML = CUSTOM_CATS.map(([k,label,hint])=>`<div style="width:100%;text-align:left;margin-bottom:14px"><div style="font-weight:800;font-size:15px">${label}</div><div class="small" style="margin:2px 0 6px">${hint}</div><textarea id="cu_${k}" rows="3" style="width:100%;background:var(--card2);border:none;border-radius:12px;padding:10px;color:var(--ink);font-size:15px;font-family:inherit;resize:vertical">${(CUSTOM[k]||[]).map(esc).join('\n')}</textarea></div>`).join('')
+      + `<label style="display:flex;gap:10px;align-items:center;width:100%;font-size:14px;margin:4px 0 8px"><input type="checkbox" id="cu_only" ${onlyCustom?'checked':''} style="width:22px;height:22px">オリジナルお題がある項目は、オリジナルだけを出す</label><div class="small" id="cu_msg" style="color:var(--mint)"></div>`;
+    $('gBtn').textContent=this.btn; },
+  btn:'保存する', btn2:'ぜんぶ消す',
+  run(s){ CUSTOM_CATS.forEach(([k])=>{ CUSTOM[k]=$('cu_'+k).value.split('\n').map(x=>x.trim()).filter(Boolean).slice(0,200); });
+    onlyCustom=$('cu_only').checked;
+    try{ localStorage.setItem('nomige_custom',JSON.stringify(CUSTOM)); localStorage.setItem('nomige_onlycustom',onlyCustom?'1':'0'); }catch(e){}
+    applyCustom(); const n=CUSTOM_CATS.reduce((t,[k])=>t+CUSTOM[k].length,0);
+    $('cu_msg').textContent = n ? `保存しました！（${n}個のオリジナルお題）` : '保存しました（オリジナルお題なし）'; },
+  run2(s){ if($('gBtn2').dataset.sure!=='1'){ $('gBtn2').dataset.sure='1'; $('gBtn2').textContent='本当に消す？もう一回押してね'; return; }
+    delete $('gBtn2').dataset.sure; $('gBtn2').textContent=this.btn2; CUSTOM={}; onlyCustom=false;
+    try{ localStorage.removeItem('nomige_custom'); localStorage.removeItem('nomige_onlycustom'); }catch(e){} applyCustom(); this.init(s); $('cu_msg').textContent='ぜんぶ消しました'; },
+  stop(){ const s=$('stage'); if(s) s.style.justifyContent=''; delete $('gBtn2').dataset.sure; }
+});
 const EXTRA = [
  {id:'oekaki',em:'🎨',name:'お絵かき当て',c:'var(--blue)',desc:'60秒で描いてみんなが当てる',
   rule:'描く人だけがお題を見て、60秒でスマホに絵を描く。文字・数字はNG！時間内にみんなが当てられなかったら描いた人が罰ゲーム。',
@@ -598,12 +706,13 @@ GAMES.push({id:'kaikei',hide:1,em:'💴',name:'お会計モード',c:'var(--yell
     s.innerHTML=`<div class="small">${title}</div><div class="main pop" style="font-size:30px">合計 ${yen(this.total)}</div>
       <div style="width:100%;margin-top:12px">${ns.map((n,i)=>`<div class="pop" style="animation-delay:${i*0.12}s;animation-fill-mode:both;display:flex;justify-content:space-between;align-items:center;background:var(--card2);border-radius:12px;padding:10px 14px;margin:6px 0;font-size:17px"><b>${n}${extra&&extra[i]?` <span style="font-size:12px;color:var(--yellow)">${extra[i]}</span>`:''}</b><b style="color:var(--yellow)">${yen(amt[i])}</b></div>`).join('')}</div>
       ${odd?`<div class="small">端数は幹事の${ns[0]}さんが調整（${odd>0?'+':'−'}${yen(Math.abs(odd))}）</div>`:''}
-      <div class="sbtns"><button class="btn sub" data-act="copy">📋 LINE用にコピー</button><button class="btn sub" data-act="back">割り方を変える</button></div><div class="small" id="kCopied"></div>`;
+      <div class="sbtns"><button class="btn sub" data-act="copy">📋 LINE用にコピー</button><button class="btn sub" data-act="shareimg">📸 画像でシェア</button></div><div class="sbtns" style="margin-top:8px"><button class="btn sub" data-act="back">割り方を変える</button></div><div class="small" id="kCopied"></div>`;
   },
   async act(s,a){
     if(this.busy) return;
     if(a.startsWith('unit')){ this.read(s); this.unit=+a.slice(4); this.form(s); return; }
     if(a==='back'){ this.roles=null; this.form(s); return; }
+    if(a==='shareimg'){ const L=this.last; shareCard({label:'お会計：'+L.title, big:'合計 '+yen(this.total), lines:L.ns.map((n,i)=>[unesc(n),yen(L.amt[i])])}); return; }
     if(a==='copy'){ const L=this.last; const txt=`【お会計】${L.title}\n合計 ${yen(this.total)}\n`+L.ns.map((n,i)=>`${n}：${yen(L.amt[i])}`).join('\n')+`\n#アゲアゲノミゲー`;
       try{ await navigator.clipboard.writeText(txt); $('kCopied').textContent='コピーしました！LINEに貼ってね'; }catch(e){ $('kCopied').textContent='コピーできませんでした（長押しで選択してね）'; } return; }
     if(a.startsWith('m_')){
@@ -869,12 +978,16 @@ function renderGrid(f){
 $('filters').querySelectorAll('.chip').forEach(c=>c.onclick=()=>{ $('filters').querySelectorAll('.chip').forEach(x=>x.classList.toggle('on',x===c)); renderGrid(c.dataset.f); });
 renderGrid('all');
 $('kaikeiBtn').onclick=()=>openGame('kaikei');
+$('customBtn').onclick=()=>openGame('custom');
 $('stage').addEventListener('click',e=>{ const b=e.target.closest('[data-act]'); if(b&&cur&&cur.act) cur.act($('stage'),b.dataset.act,b); });
 $('stage').addEventListener('keydown',e=>{ if(e.key==='Enter'&&e.target.id==='nb'&&cur&&cur.act) cur.act($('stage')); });
 
-function openGame(id){
+function openGame(id, fromHash){
+  const g = GAMES.find(x=>x.id===id); if(!g) return;
   if(cur&&cur.stop) cur.stop();
-  cur = GAMES.find(g=>g.id===id);
+  cur = g;
+  if(!fromHash){ try{ history.pushState({g:id},'','#'+id); }catch(e){} }
+  document.title = cur.name+'｜アゲアゲノミゲー！';
   document.documentElement.style.setProperty('--c',cur.c);
   $('screen').style.setProperty('--c',cur.c);
   $('gEm').textContent=cur.em; $('gTitle').textContent=cur.name; $('gRule').textContent=cur.rule;
@@ -885,9 +998,25 @@ function openGame(id){
 }
 $('gBtn').onclick=()=>cur.run($('stage'));
 $('gBtn2').onclick=()=>cur.run2 && cur.run2($('stage'));
-$('back').onclick=()=>{ if(cur&&cur.stop) cur.stop(); $('screen').style.display='none'; $('home').style.display='block'; };
+function closeGame(){ if(cur&&cur.stop) cur.stop(); cur=null; $('screen').style.display='none'; $('home').style.display='block'; document.title=HOME_TITLE; }
+const HOME_TITLE = document.title;
+$('back').onclick=()=>{ if(history.state&&history.state.g) history.back(); else { closeGame(); try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){} } };
+function route(){ const id=decodeURIComponent(location.hash.slice(1)); if(id && GAMES.some(g=>g.id===id)) { if(!cur||cur.id!==id) openGame(id,true); } else if(cur) closeGame(); }
+window.addEventListener('popstate',route);
+window.addEventListener('hashchange',route);
+$('omakase').onclick=()=>{
+  const btn=$('omakase'); if(btn.dataset.busy) return; btn.dataset.busy='1'; btn.classList.add('spin');
+  const pool=GAMES.filter(g=>!g.hide&&!g.cam&&!g.mic&&!g.k);
+  const choice=pool[Math.floor(Math.random()*pool.length)]; let k=0;
+  const tick=()=>{ const g = k<13 ? pool[Math.floor(Math.random()*pool.length)] : choice;
+    btn.innerHTML=`🎲 次はこれ！<b>${g.em} ${g.name}</b>`;
+    if(k++<13) setTimeout(tick,50+k*10); else setTimeout(()=>{ btn.classList.remove('spin'); delete btn.dataset.busy; openGame(choice.id); btn.innerHTML='🎲 次なにする？<b>おまかせで選ぶ</b>'; },700); };
+  tick();
+};
 
 renderPlayers(); renderNonAlc();
+route();
+if('serviceWorker' in navigator && location.protocol==='https:'){ window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{})); }
 </script>
 </body>
 </html>
